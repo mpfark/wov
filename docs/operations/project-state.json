@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-24T23:04:47Z",
-  "based_on_source_sha": "e41af7bda5518c555190f92d208071f8c1c04521",
+  "updated_at": "2026-10-26T09:03:04.221Z",
+  "based_on_source_sha": "ec36640d85f2d375543a352b04482c411aa42855",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -2907,6 +2907,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/combat2-persistent-aggression-handoff.md",
       "evidence": "Database 0030 installed previously; matching workers now deployed (see edge_function_deployments entry). Release coordination complete at the code level: revised SQL plus matching resolver/types are co-deployed, so the feature is no longer inactive-for-missing-worker, but no gameplay acceptance has been executed and none is claimed. Remaining before activation claims: owner-operated manual acceptance checklist in the handoff (untouched passive creatures, hit/miss provocation, hostile ability miss/zero-damage, leave/return persistence, OOC regeneration, death/respawn reset, multi-creature isolation). Known limitation: live bundle identity unverified (no revision ID); OPTIONS 405 observed and consistent with internal worker design."
+    },
+    {
+      "identity": "ENG-COMBAT-001/002 / ENG-DELIVERY-001 — frontend targeting and node-entry HP presentation",
+      "status": "authored",
+      "sha": "ec36640d85f2d375543a352b04482c411aa42855",
+      "timestamp": "2026-10-26T09:03:04.221Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex; bounded owner-authorized frontend corrections",
+      "directly_verified": true,
+      "artifact": "docs/operations/combat2-targeting-hp-presentation.md",
+      "evidence": "Dedicated codex/combat2-targeting-hp-presentation from current main. Enemy ability buttons use selected living creature rather than saved ally target; ally/self paths retained. Bounded backend refusal codes preserved and displayed without relaxing readiness. Cached creature names render immediately while numeric HP waits for current-node roster or valid combat projection. Node/request checks fence late roster responses/cache updates; GamePage overrides require same current-node identity and spawn. Loading diagnostic values are null; no client regeneration/polling/authoritative changes.185 focused frontend checks PASS; root and app TypeScript and build PASS (large-chunk advisory), documentation/state/source preservation checks pass. Existing movement/combat/CP/target/stance gates retained. No independent live Judgment root cause or server-settlement timing proven. Frontend-only; SQL/Edge N/A; owner review/merge and Mik manual Publish/live verification pending. Prior accepted risks/controls/closures/admin XP pause preserved."
     }
   ],
   "known_blockers": [
@@ -3160,15 +3171,15 @@
     }
   ],
   "next_approved_task": {
-    "identity": "Owner-operated gameplay acceptance for persistent creature aggression",
+    "identity": "Review Combat2 frontend targeting/HP presentation branch before Mik manual Publish",
     "status": "authored",
-    "sha": "e41af7bda5518c555190f92d208071f8c1c04521",
-    "timestamp": "2026-10-24T23:04:47Z",
+    "sha": "ec36640d85f2d375543a352b04482c411aa42855",
+    "timestamp": "2026-10-26T09:03:04.221Z",
     "evidence_type": "repository",
-    "reporting_actor": "Lovable",
+    "reporting_actor": "Codex; bounded frontend delivery",
     "directly_verified": true,
-    "artifact": "docs/operations/combat2-persistent-aggression-handoff.md",
-    "evidence": "Owner separately performs the handoff manual acceptance checklist in a controlled test (passive-on-entry, hit/miss provocation, hostile ability miss/zero-damage provocation, leave/return persistence, OOC regen without calming, death/respawn reset, multi-creature isolation). No frontend publication required. Recovery is separately reviewed forward correction; do not reset world state."
+    "artifact": "docs/operations/combat2-targeting-hp-presentation.md",
+    "evidence": "Owner reviews and merges dedicated branch, then Mik manually Publishes. Verify enemy versus ally/self target selection, refusal detail and cache HP loading/current combat display. No SQL/Edge installation or hosted preflight needed. If a separate live Judgment refusal or authoritative HP timing issue persists, capture existing Diagnostics/one RPC result and seek separately scoped investigation. No automatic merge, publication, backend change or paused-command activation."
   },
   "volatile_runtime_observations": [
     {

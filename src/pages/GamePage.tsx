@@ -377,8 +377,10 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const actionEpochRef = useRef(actionEpoch);
   actionEpochRef.current = actionEpoch;
   const presentedCreatureHp = useMemo(() => activeCombat2Presentation
-    ? Object.fromEntries(activeCombat2Presentation.creatures.map((creature) => [creature.creatureId, creature.hp]))
-    : null, [activeCombat2Presentation]);
+    ? Object.fromEntries(activeCombat2Presentation.creatures.filter(projection => creatures.some(creature =>
+        creature.node_id === character.current_node_id && creature.id === projection.creatureId
+        && creature.spawn_seq === projection.spawnSeq)).map(creature => [creature.creatureId, creature.hp]))
+    : null, [activeCombat2Presentation, creatures, character.current_node_id]);
   useCombat2ResourceCapture(() => ({ characterId: character.id, nodeId: character.current_node_id,
     encounterId: combat2.encounterId, layer: 'client_state', source: 'game_page_character',
     status: combat2.sessionStatus, player: diagnosticPlayerResources(character as unknown as Record<string, unknown>) }));

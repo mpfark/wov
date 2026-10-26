@@ -22,7 +22,7 @@ export interface RouteCombat2ActionOptions {
   reservedBuffs: Record<string, unknown>;
   legacy(): void | Promise<void>;
   submit(action: Combat2IntentAction, feedback?: { message: string }): Promise<Combat2IntentResult>;
-  initiateHostile?(targetCreatureId: string, abilityKey: string): Promise<{ status: 'entered' | 'refused'; reason?: string | null }>;
+  initiateHostile?(targetCreatureId: string, abilityKey: string): Promise<{ status: 'entered' | 'refused'; classification?: string; reason?: string | null }>;
   resolveInitiationTarget?(): { ok: true; target: { creatureId: string; name: string } } | { ok: false; reason: string };
   diagnose(message: string | null): void;
   changeStance?(abilityKey: string, action: 'activate' | 'drop'): Promise<{
@@ -81,7 +81,7 @@ export async function routeCombat2Action(options: RouteCombat2ActionOptions): Pr
     if (target.ok === false) { options.diagnose(target.reason); return; }
     const result = await options.initiateHostile(target.target.creatureId, ability.abilityKey);
     if (result.status === 'entered') { options.diagnose(null); return; }
-    options.diagnose(`Combat2 refused ${ability.label}${result.reason ? `: ${result.reason}` : ''}`);
+    options.diagnose(`Combat2 refused ${ability.label}${result.reason || result.classification ? `: ${result.reason || result.classification}` : ''}`);
     return;
   }
   if (options.readiness && 'message' in options.readiness) {

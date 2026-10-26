@@ -99,3 +99,15 @@ it('captures rendered creature overrides and node transitions rather than mislab
   rendered.rerender(view('destination',3));
   expect(snapshots().filter(s => s.source==='node_view').at(-1)).toMatchObject({nodeId:'destination',creatures:[{hp:3}]});
 });
+it('records loading rather than cached HP as the displayed value until roster confirmation',()=>{
+ const player={id:'player',current_node_id:'node',class:'warrior',level:1} as Character;
+ const creature={id:'creature',name:'Wounded wolf',hp:17,max_hp:80,spawn_seq:2,is_alive:true,rarity:'regular',level:1,stats:{}};
+ const view=(ready:boolean,hp:number)=><NodeView node={{id:'node',name:'Room',description:'',connections:[]} as any}
+  region={undefined} players={[]} creatures={[{...creature,hp}] as any} character={player} eventLog={[]}
+  onAttack={()=>undefined} onTalkToNPC={()=>undefined} rosterActionable={ready}/>;
+ startCombat2Recording('player','node',null);const rendered=render(view(false,17));
+ expect(screen.getByText('Wounded wolf')).toBeInTheDocument();expect(screen.queryByText('17/80')).not.toBeInTheDocument();
+ expect(snapshots().find(s=>s.source==='node_view')?.creatures[0]).toMatchObject({hp:null,maxHp:null});
+ rendered.rerender(view(true,64));expect(screen.getByText('64/80')).toBeInTheDocument();
+ expect(snapshots().filter(s=>s.source==='node_view').at(-1)?.creatures[0]).toMatchObject({hp:64,maxHp:80});
+});

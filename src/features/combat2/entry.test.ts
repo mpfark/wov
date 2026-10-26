@@ -27,7 +27,7 @@ describe('decodeCombat2Entry', () => {
     [{ ok: false, kind: 'node_changed' }, 'node_changed'],
     [{ ok: false, kind: 'invalid_request', reason: 'request_id_conflict' }, 'invalid_request'],
     [{ ok: false, kind: 'no_engagement' }, 'no_engagement'],
-    [{ ok: false, kind: 'future_refusal' }, 'refused'],
+    [{ ok: false, kind: 'future_refusal' }, 'future_refusal'],
   ] as const)('normalizes refusal %#', (payload, classification) => {
     expect(decodeCombat2Entry(payload)).toMatchObject({ status: 'refused', classification });
   });
@@ -83,4 +83,11 @@ describe('Combat2 entry transport', () => {
     await expect(adapter.enter(CHARACTER, REQUEST)).rejects.toMatchObject({ code: 'uncertain' });
     expect(rpc).toHaveBeenCalledOnce();
   });
+});
+
+it.each(['ability_unavailable','non_hostile_action','invalid_target','insufficient_cp'])('preserves authoritative refusal %s without making it ready', code => {
+  expect(decodeCombat2Entry({ok:false,kind:code,reason:'server detail'})).toEqual({status:'refused',classification:code,reason:'server detail'});
+});
+it.each(['not a machine code','x'.repeat(81)])('bounds unstructured refusal kinds', kind => {
+  expect(decodeCombat2Entry({ok:false,kind})).toMatchObject({status:'refused',classification:'refused'});
 });

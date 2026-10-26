@@ -69,6 +69,8 @@ Current bounded follow-up: [hostile ability idle-readiness correction](../operat
 - **Re-entry observation (2026-10-21):** a previously engaged passive creature did not act aggressively after node re-entry; original encounter active/ended state unknown. Cross-reference ENG-COMBAT-001 and G4 lifecycle, not an approved aggression-rule change or confirmed defect. [Evidence](../operations/combat2-owner-log-lifecycle-observations.md).
 - **Revised owner rule2026-10-23:** valid committed hostile attempts, including misses/zero damage, provoke life-scoped aggression; this supersedes the initial direct-damage-only candidate. [Candidate, resolver contract and handoff](../operations/combat2-persistent-aggression-handoff.md) use a server-resolved exact-spawn proposal plus guarded SQL. Standalone DoT/proc/retaliation and non-hostile actions do not provoke. SQL installation then matching combat2-tick Edge deployment remain separately authorized gates; no frontend change or permanent encounter. Local PostgreSQL proof passed; hosted/live acceptance pending. Reuses ENG-COMBAT-001/002 and G4, preserving earlier closures.
 
+- **Focused frontend follow-up2026-10-26:** [targeting and HP presentation](../operations/combat2-targeting-hp-presentation.md) separates enemy targets from saved ally selection, preserves refusal codes and hides cached HP until current-node roster confirmation (valid combat overrides retained). Source-only; review/merge/Mik manual Publish and live checks pending. No backend, combat or regeneration rule change; a separate live Judgment refusal remains unproven.
+
 ### ENG-HB-001 — Explicit global heartbeat identity
 
 - **Engine area / status / priority:** scheduling; `live_verification_pending`; 2.

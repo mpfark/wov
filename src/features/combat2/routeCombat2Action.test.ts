@@ -208,3 +208,10 @@ describe('Combat2 deliberate action routing', () => {
     expect(h.legacy).not.toHaveBeenCalled();
   });
 });
+
+it('shows the preserved hostile-entry refusal code when the backend has no separate reason',async()=>{
+ const h=harness({sessionReady:false,readiness:{ready:true},
+  resolveInitiationTarget:()=>({ok:true,target:{creatureId:CREATURE,name:'Goblin'}}),
+  initiateHostile:vi.fn().mockResolvedValue({status:'refused',classification:'ability_unavailable',reason:null})});
+ await routeCombat2Action(h.options);expect(h.diagnose).toHaveBeenCalledWith('Combat2 refused Fireball: ability_unavailable');expect(h.submit).not.toHaveBeenCalled();
+});
