@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-27T13:41:45Z",
-  "based_on_source_sha": "2dc2cfd1f34ef63b49a9706761bf94b3b93a01a8",
+  "updated_at": "2026-10-27T21:16:39Z",
+  "based_on_source_sha": "e1faa06b4fbf59d723636bde74af6abd503609a2",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -809,6 +809,17 @@
     "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails."
   },
   "combat2_operational_work": [
+    {
+      "identity": "ENG-ABILITY-WIZARD-001G3B — producer/persistence contract handoff; authority gate OPEN",
+      "status": "blocked",
+      "sha": "e1faa06b4fbf59d723636bde74af6abd503609a2",
+      "timestamp": "2026-10-27T21:16:39Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex; owner-authorized local001G3B bounded investigation",
+      "directly_verified": true,
+      "artifact": "docs/operations/wizard-001G3B-producer-persistence-contract.md",
+      "evidence": "Baseline fetched origin/main and HEAD e1faa06b, clean start. Bounded canonical mechanics/resolver/worker, Edge, node_effect SQL and retained commit-source inspection identifies no active relevant repository creature-owned character-targeted periodic gameplay producer. Player effects, SQL autoattack target tuple and generic persistence are explicitly distinguished from qualifying capture; installed producers/definitions remain UNKNOWN. Concrete retained-core gaps: arbitrary effects_insert config is not source provenance; effects_update config replacement can erase/rebind/add tuple; FK ON DELETE SET NULL can conflict with immutable definition metadata. Non-executable local integration candidate identifies pre-mutation guards after replay/claim/state fences, exact captured source/encounter/generation, same-tick death versus concurrent respawn, immutable updates/legacy preservation, lifecycle/definition-deletion constraints and exact native acceptance requirements. No guessed wrapper replacement, executable SQL, new producer/subsystem, runtime change or source-authority simulation.102 fresh TypeScript source/roundtrip/transport/worker tests passed across4 files; no new tests. Prior426 G3A regressions reused with unchanged runtime. Publication verified36 unchanged records; documentation state/whitespace checks recorded in final report. Native SQL persistence/concurrency/rollback and hosted behavior NOT TESTED. G2 remains blocked on actual trusted producer/claim/commit identity/locks and verified persistence; authorize narrow installed-definition reads or supply trusted exact definitions before pinned native candidate. If no installed producer exists, obtain fixture-only dormant-gap scope rather than create gameplay. Approved living-source-only modifiers/baseline after death, all five F gates, fixed reservation SQL/lifecycle/publication gates, deferred ENG-BALANCE-001 priority/dependencies preserved. Only local handoff/state docs changed; catalogue, authoring, SQL/history, runtime, UI, Edge mirrors, classes unchanged. No Cloud, registration, deployment, Publish, commit or push."
+    },
     {
       "identity": "ENG-ABILITY-WIZARD-001G3A — local effect source identity; producer/persistence OPEN",
       "status": "authored",
