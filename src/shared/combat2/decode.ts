@@ -283,10 +283,18 @@ function decodeEffect(r: Reader, path: string, raw: unknown): SnapshotEffect {
 
 function decodeCharacterStance(r: Reader, path: string, raw: unknown): NonNullable<NodeSnapshot['character_stances']>[number] {
   const o = r.object(path, raw);
+  let reservation: { mode: 'fixed'; amount: number } | undefined;
+  if (o.reservation !== undefined) {
+    const value = r.object(`${path}.reservation`, o.reservation);
+    if (value.mode !== 'fixed' || typeof value.amount !== 'number' || !Number.isSafeInteger(value.amount)
+        || value.amount <= 0 || o.reserve_pct !== 0) r.errors.push(`${path}.reservation: invalid fixed contract`);
+    else reservation = { mode: 'fixed', amount: value.amount };
+  }
   return {
     character_id: r.str(`${path}.character_id`, o.character_id),
     ability_key: r.str(`${path}.ability_key`, o.ability_key),
     reserve_pct: r.num(`${path}.reserve_pct`, o.reserve_pct),
+    ...(reservation ? { reservation } : {}),
     version: r.num(`${path}.version`, o.version),
     state: (o.state ?? {}) as Record<string, unknown>,
     activated_at: r.str(`${path}.activated_at`, o.activated_at),
@@ -618,6 +626,10 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
   const presenceIdentities = new Set<string>();
   const sharedIdentities = new Set<string>();
   for (const [i, effect] of snapshot.effects.entries()) {
+    if (effect.kind === 'offense' && effect.config.offense_mode === 'base_cp_discount'
+        && (typeof effect.magnitude !== 'number' || !Number.isSafeInteger(effect.magnitude) || effect.magnitude < 0
+          || typeof effect.config.cp_discount_min !== 'number' || !Number.isSafeInteger(effect.config.cp_discount_min)
+          || effect.config.cp_discount_min < 0)) r.errors.push(`snapshot.effects[${i}]: invalid base CP discount`);
     if (effect.interval_ms !== null && !readCombat2TickTiming(effect.config)) {
       r.errors.push(`snapshot.effects[${i}]: periodic tick timing is malformed`);
     }

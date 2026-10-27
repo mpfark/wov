@@ -92,6 +92,10 @@ export interface AbilitySpec {
   cpCost: number;
   /** Fraction of max CP reserved while a stance is active. */
   cpReservePct: number | null;
+  /** Explicit authored fixed amount; never combined with a percentage. */
+  cpReserveFixed?: number;
+  /** Automatic extra spend above the effective base price, from working spendable CP. */
+  extraCpMax?: number;
   amountCalc: AbilityCalc | null;
   durationCalc: AbilityCalc | null;
   mechanicCalcs: Record<string, AbilityCalc>;
@@ -132,6 +136,7 @@ export interface MechanicContext {
   /** Existing stacks of the relevant stack type on the target. */
   existingStacks?: number;
   sharedStacks?: number;
+  extraCp?: number;
   /** Sum of authored damage amplification on the target. */
   amplification?: number;
   /** Sunder-style AC reduction on the creature. */
@@ -671,11 +676,13 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
   weapon_attack: (ctx, spec) => offensiveHit(ctx, spec, 'weapon_attack'),
 
   spell_attack: (ctx, spec) => {
-    if (!spec.sharedStackType) return offensiveHit(ctx, spec, 'spell_attack');
+    if (!spec.sharedStackType && spec.extraCpMax === undefined) return offensiveHit(ctx, spec, 'spell_attack');
     const stacks = Math.max(0, ctx.sharedStacks ?? 0);
     return offensiveHit(ctx, spec, 'spell_attack', {
-      multiplier: 1 + stacks * Math.max(0, resolveMechanicCalc(ctx, spec, 'per_stack_multiplier', { active_stacks: stacks }) ?? 0),
-      context: { active_stacks: stacks },
+      multiplier: spec.sharedStackType
+        ? 1 + stacks * Math.max(0, resolveMechanicCalc(ctx, spec, 'per_stack_multiplier', { active_stacks: stacks }) ?? 0) : 1,
+      context: { ...(spec.sharedStackType ? { active_stacks: stacks } : {}),
+        ...(spec.extraCpMax !== undefined ? { extra_cp: ctx.extraCp ?? 0 } : {}) },
     });
   },
 

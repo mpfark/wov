@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-27T09:06:46Z",
-  "based_on_source_sha": "0c2ebf132c3e222cba28341f526ae7eea57e8df4",
+  "updated_at": "2026-10-27T09:43:01Z",
+  "based_on_source_sha": "43b9aabd785ccc8f0f34c319667ba565a5204088",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -809,6 +809,17 @@
     "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails."
   },
   "combat2_operational_work": [
+    {
+      "identity": "ENG-ABILITY-WIZARD-001F — local opt-in Arcane and CP foundation",
+      "status": "authored",
+      "sha": "43b9aabd785ccc8f0f34c319667ba565a5204088",
+      "timestamp": "2026-10-27T09:43:01Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex; owner-authorized local001F implementation",
+      "directly_verified": true,
+      "artifact": "docs/operations/wizard-001F-local-foundation.md",
+      "evidence": "Local uncommitted canonical preparation against fetched origin/main43b9aabd. Authored base_cp_discount with minimum, automatic extra_cp_max and typed extra_cp context, cp_reserve_fixed and explicit future fixed claim descriptor. Resolver uses current working spendable CP before affordability/settlement; total base+extra is spent on misses. Surge reuses original direct-only10-22% multiplier and excludes burn ticks/Orbs/item procs. Percentage defaults and SQL-owned ward_remaining preserved; fixed claim/catalogue mismatch aborts through existing resolver_failed worker path before commit. 500 unique targeted tests passed across20 files:48 new Arcane/CP tests plus452 existing Fire/Frost/resolver/stance/transport/all-class formula-parity cases. Local fixtures cover costs/floor/stance exclusions,0/partial/max burn, prior actions, fixed/percentage, ward depletion/death proposal, ignored manual burn/no cooldown and deterministic retry. Application TypeScript passed; publication verified36 unchanged production records; project-state/link/scope/whitespace checks passed. SQL remains percentage-only and fixed wire metadata must not be inferred or inserted into current reserve_pct>0 tables. Future SQL preflight/stance storage/projection/claim/commit/Arena/lifecycle and configured publication gates are explicitly listed in the handoff; not full server integration or deploy-ready. OPEN001E Weakened generic creature-owned character-targeted effect-pulse outgoing-reduction gap retained, not fixed here. Production catalogue/authoring, SQL/migrations, UI and Edge mirrors unchanged; only AbilityCalc extra_cp type/allowlist added, no attribute/curve/coefficient change or other-class numeric drift. No game Cloud/backend access/mutation, deployment/Publish/commit/push; Git fetch only. Prior status, controls, next approved task and ENG-BALANCE-001 deferral/priority/dependencies preserved. SHA is analysed baseline, not a commit containing local edits."
+    },
     {
       "identity": "ENG-ABILITY-WIZARD-001E — local opt-in Frost foundation",
       "status": "authored",

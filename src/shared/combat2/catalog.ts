@@ -214,7 +214,12 @@ export function buildAbilitySpec(
     return reject('missing_interval');
   }
 
-  if (activation === 'stance' && !(record.cpReservePct && record.cpReservePct > 0)) {
+  const fixedReserve = config.cp_reserve_fixed;
+  if (fixedReserve !== undefined && (activation !== 'stance' || typeof fixedReserve !== 'number'
+      || !Number.isSafeInteger(fixedReserve) || fixedReserve <= 0 || (record.cpReservePct ?? 0) !== 0)) {
+    return reject('invalid_calc', 'fixed reservation requires a positive integer, stance and no percentage');
+  }
+  if (activation === 'stance' && fixedReserve === undefined && !(record.cpReservePct && record.cpReservePct > 0)) {
     return reject('missing_cp_reserve');
   }
 
@@ -322,6 +327,20 @@ export function buildAbilitySpec(
     return reject('invalid_calc', 'contact debuff requires a self control stance, fractional magnitude and duration');
   }
 
+  const extraCpMax = config.extra_cp_max;
+  const hasExtraContext = amountCalc?.terms.some(term => term.source === 'context' && term.contextKey === 'extra_cp');
+  if ((extraCpMax !== undefined && (typeof extraCpMax !== 'number' || !Number.isSafeInteger(extraCpMax)
+      || extraCpMax < 0 || mechanic !== 'spell_attack' || targetType !== 'enemy' || activation === 'stance' || !hasExtraContext))
+      || (hasExtraContext && extraCpMax === undefined)) {
+    return reject('invalid_calc', 'automatic extra CP requires a direct spell and extra_cp calculation context');
+  }
+  if (config.offense_mode === 'base_cp_discount' && (mechanic !== 'offense_buff'
+      || activation !== 'stance' || targetType !== 'self' || amountCalc?.unit !== 'count'
+      || typeof config.cp_discount_min !== 'number' || !Number.isSafeInteger(config.cp_discount_min)
+      || config.cp_discount_min < 0)) {
+    return reject('invalid_calc', 'base CP discount requires a self offense stance and integer minimum');
+  }
+
   const spec: AbilitySpec = {
     abilityKey: record.abilityKey,
     classKey: record.classKey,
@@ -336,6 +355,8 @@ export function buildAbilitySpec(
     scalingStat: readStat(config, 'stat') ?? readStat(config, 'magnitude_stat') ?? 'str',
     cpCost: Math.max(0, record.cpCost ?? 0),
     cpReservePct: record.cpReservePct ?? null,
+    ...(typeof fixedReserve === 'number' ? { cpReserveFixed: fixedReserve } : {}),
+    ...(typeof extraCpMax === 'number' ? { extraCpMax } : {}),
     amountCalc,
     durationCalc,
     mechanicCalcs,

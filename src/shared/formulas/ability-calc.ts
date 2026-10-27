@@ -70,7 +70,7 @@ export type CalcTransform =
 export type CalcDie = 'weapon_main' | 'd4' | 'd6' | 'd8' | 'd10' | 'd12';
 
 /** Allowlisted runtime context values a `context` term may read. */
-export type CalcContextKey = 'active_stacks' | 'consumed_stacks';
+export type CalcContextKey = 'active_stacks' | 'consumed_stacks' | 'extra_cp';
 
 export interface CalcTerm {
   source: 'const' | 'stat' | 'level' | 'stat_threshold' | 'dice' | 'context';
@@ -442,7 +442,7 @@ const VALID_SOURCES = new Set<CalcTerm['source']>([
   'const', 'stat', 'level', 'stat_threshold', 'dice', 'context',
 ]);
 const VALID_DICE = new Set<CalcDie>(['weapon_main', 'd4', 'd6', 'd8', 'd10', 'd12']);
-const VALID_CONTEXT = new Set<CalcContextKey>(['active_stacks', 'consumed_stacks']);
+const VALID_CONTEXT = new Set<CalcContextKey>(['active_stacks', 'consumed_stacks', 'extra_cp']);
 
 /** Structural validation for admin-submitted calcs. Returns error strings. */
 export function validateCalc(calc: AbilityCalc, depth = 0): string[] {

@@ -244,6 +244,8 @@ export interface SnapshotCharacterStance {
   character_id: string;
   ability_key: string;
   reserve_pct: number;
+  /** Future SQL claim contract. Absent means the existing percentage representation. */
+  reservation?: { mode: 'fixed'; amount: number };
   version: number;
   state: Record<string, unknown>;
   activated_at: string;

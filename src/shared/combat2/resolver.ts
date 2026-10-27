@@ -17,6 +17,7 @@ import { getCpRegen, getEffectiveMaxCp, getEffectiveMaxHp, getEffectiveMaxMp, ge
 import { applyMitigationPipeline, readMitigationParams } from './mitigation';
 import { TickRandom } from './rng';
 import { ownedStackIdentity, sharedStatusIdentity } from './stack-identity';
+import { effectiveBaseCp, stanceReservationCp } from './cp';
 import { combat2PulseDue, combat2TickTiming, combat2TicksForMs, readCombat2TickTiming } from './time';
 import {
   MECHANIC_HANDLERS,
@@ -129,14 +130,21 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     const fighter = snapshot.fighters.find(row => row.character_id === stance.character_id && row.present);
     const spec = fighter ? deps.abilities.get(`${fighter.class}:${stance.ability_key}`)
       ?? deps.abilities.get(stance.ability_key) : undefined;
-    if (!fighter || !spec || spec.activation !== 'stance' || spec.cpReservePct !== stance.reserve_pct) continue;
+    if (!fighter || !spec || spec.activation !== 'stance') continue;
+    if (spec.cpReserveFixed !== undefined || stance.reservation) {
+      if (spec.cpReserveFixed === undefined || stance.reservation?.mode !== 'fixed'
+          || stance.reservation.amount !== spec.cpReserveFixed || stance.reserve_pct !== 0) {
+        // Abort before a proposal can commit. Never reinterpret legacy percentage SQL state as fixed.
+        throw new Error('stance_reservation_contract_mismatch');
+      }
+    } else if (spec.cpReservePct !== stance.reserve_pct) continue;
     proposed.stance_fence.push({ character_id: stance.character_id, ability_key: stance.ability_key,
       version: stance.version });
     stanceEffects.push({ id: `stance:${stance.character_id}:${stance.ability_key}:reservation`,
       kind: 'reservation', effect_type: 'cp_reservation', ability_key: stance.ability_key,
       target_character_id: stance.character_id, target_creature_id: null,
       source_character_id: stance.character_id, source_creature_id: null, stacks: 1,
-      magnitude: Math.floor(Math.max(0, fighter.max_cp) * stance.reserve_pct),
+      magnitude: stanceReservationCp(spec, fighter.max_cp),
       config: { reserve_pct: stance.reserve_pct, character_stance_version: stance.version,
         target_fighter_id: fighter.id, target_entry_seq: fighter.entry_seq, persistent_stance: true }, expires_at: null,
       next_due_at: null, interval_ms: null, last_pulse_tick: null, is_reservation: true });
@@ -922,7 +930,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
 
     // ── 2b. stance activation ────────────────────────────────────
     if (intent.intent_kind === 'stance_activate') {
-      if (spec.activation !== 'stance' || !spec.cpReservePct) {
+      if (spec.activation !== 'stance' || (!spec.cpReservePct && spec.cpReserveFixed === undefined)) {
         emit({ kind: 'action_rejected', outcomeReason: 'not_a_stance', abilityKey: spec.abilityKey });
         continue;
       }
@@ -958,7 +966,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         continue;
       }
 
-      const reserveAmount = Math.floor(actor.fighter.max_cp * spec.cpReservePct);
+      const reserveAmount = stanceReservationCp(spec, actor.fighter.max_cp);
       const availableCp = actor.cp - reservedFor(actor.fighter.character_id);
       if (availableCp < spec.cpCost + reserveAmount) {
         emit({ kind: 'action_rejected', outcomeReason: 'insufficient_cp', abilityKey: spec.abilityKey });
@@ -989,7 +997,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         source_character_id: actor.fighter.character_id,
         stacks: 1,
         magnitude: reserveAmount,
-        config: { reserve_pct: spec.cpReservePct, target_fighter_id: actor.fighter.id,
+        config: { reserve_pct: spec.cpReservePct,
+          ...(spec.cpReserveFixed !== undefined ? { reserve_fixed: spec.cpReserveFixed } : {}), target_fighter_id: actor.fighter.id,
           target_entry_seq: actor.fighter.entry_seq },
         expires_at: null,
         is_reservation: true,
@@ -1009,7 +1018,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
 
     // ── 2c. ordinary ability ─────────────────────────────────────
     const availableCp = actor.cp - reservedFor(actor.fighter.character_id);
-    if (availableCp < spec.cpCost) {
+    const baseCost = effectiveBaseCp(spec, activeEffectsFor(actor.fighter.character_id));
+    if (availableCp < baseCost) {
       emit({ kind: 'action_rejected', outcomeReason: 'insufficient_cp', abilityKey: spec.abilityKey });
       continue;
     }
@@ -1092,6 +1102,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     const sharedStack = spec.sharedStackType && targetCreature
       ? sharedStatuses.get(sharedStatusIdentity(targetCreature.row.id, targetCreature.row.spawn_seq, spec.sharedStackType))
       : undefined;
+    const extraCp = spec.extraCpMax === undefined ? 0 : Math.min(spec.extraCpMax, Math.max(0, availableCp - baseCost));
+    const resolvedSpec = baseCost + extraCp === spec.cpCost ? spec : { ...spec, cpCost: baseCost + extraCp };
     const ctx: MechanicContext = {
       rng,
       nowMs,
@@ -1104,6 +1116,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       existingStacks: spec.stackGrouping === 'caster_status' ? ownedStack?.stacks ?? 0
         : stackEffects.reduce((sum, e) => sum + Math.max(1, e.stacks), 0),
       sharedStacks: (sharedStack?.insert ?? sharedStack?.effect)?.stacks ?? 0,
+      extraCp,
       amplification: targetCreature ? amplificationFor(targetCreature, 'ability') : 0,
       creatureAcReduction: targetCreature
         ? snapshot.effects
@@ -1120,10 +1133,13 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       activeEffects: activeEffectsFor(actor.fighter.character_id),
     };
 
-    const outcome: MechanicOutcome = MECHANIC_HANDLERS[spec.mechanic](ctx, spec);
+    const outcome: MechanicOutcome = MECHANIC_HANDLERS[spec.mechanic](ctx, resolvedSpec);
     if (outcome.rejected) {
       emit({ kind: 'action_rejected', outcomeReason: outcome.rejected, abilityKey: spec.abilityKey });
       continue;
+    }
+    if (spec.extraCpMax !== undefined) for (const event of outcome.events) {
+      if (event.kind === 'attack') event.meta = { ...event.meta, baseCp: baseCost, extraCp };
     }
 
     // Only a fully validated, non-rejected enemy action establishes an attempt.
