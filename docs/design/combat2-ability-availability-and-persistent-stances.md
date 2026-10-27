@@ -1,5 +1,7 @@
 # Combat2 ability availability and persistent stances
 
+Wizard design amendment2026-10-27: [ENG-ABILITY-WIZARD-001](wizard-redesign.md) specifies future fixed Wizard reservations, five choice pairs and the retained SQL-owned WIS-pool/INT-OOC-regeneration Force Shield. The matrix and percentage descriptions in this document retain their historical source/delivery scope. The amendment does not change current runtime, other-class percentage reservations, durable stance ownership, action-slot behavior, drop-first loadout rules, death cleanup or publication gates.
+
 Status: approved design with Lovable-reported stance installation and Edge deployment; frontend publication and stance live verification pending. ACL-only helper follow-up is authored but not installed. Detailed engine invariants remain owned by [game-engine.md](game-engine.md), while operational evidence remains owned by [project-state.json](../operations/project-state.json).
 
 ## Pre-implementation audit baseline

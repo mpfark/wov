@@ -2,6 +2,8 @@
 
 ENG-ABILITY-001 preserves CP costs, unlock levels, resource formulas, percentage stance reservation and the world heartbeat. Source verification is separate from Cloud installation/deployment/publication.
 
+That preservation describes the delivered ENG-ABILITY-001 scope. The separately approved [Wizard target design](wizard-redesign.md), documented2026-10-27 under ENG-ABILITY-WIZARD-001B, intentionally plans different Wizard costs/fixed reservations and status semantics. It is not implemented or published here. Reuse this publication chain with explicit Wizard semantics and unchanged other-class defaults; reconcile database preflight/persistent stances and published workers before release. No existing generated catalogue is changed by the design record.
+
 ## Publication
 
 Authoring remains in `base_abilities`, configured identity/attributes in `abilities`, class/role/unlock/default/overrides in `class_ability_assignments`, statuses in `applied_statuses` and scaling in `classes`.

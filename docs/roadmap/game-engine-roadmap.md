@@ -29,6 +29,15 @@ Owner-approved bounded test support: [WOV-IDEA-025 scoped test teleport candidat
 - **Remaining gates:** installed SQL/bundle parity; synchronization of the approved local numeric/presentation edits to configured authoring before release; deferred Rend initial weapon-hit balance formula; separate review/publication/deployment. Battle Cry chance reduction, no Grand Finale die and Consecrate node scope are decided and implemented locally.
 - **Specification sections:** Effects and stances; One authoritative world heartbeat; Resources and attributes. No CP-economy redesign.
 
+### ENG-ABILITY-WIZARD-001 — Wizard role redesign
+
+- **Engine area / status:** Wizard ability design; `planned` implementation, mechanics agreed in ENG-ABILITY-WIZARD-001B. No new priority or execution-sequence promotion; implementation is not started or authorized by the documentation task.
+- **Approved target:** [five role pairs and contracts](../design/wizard-redesign.md): fixed Wizard stance CP, shared Fireball/Orbs caster-owned Ignite, shared Chilled, Conflagrate consumes only on landed hit, direct-only Surge, Focus/Overload CP and Frost Armor/Weakened. Current runtime and all other-class rules remain unchanged.
+- **Dependencies:** existing ENG-ABILITY-001 publication, ENG-STANCE-001/002 character ownership/availability, ENG-COMBAT-HIT-001 contact semantics and matching SQL/config/worker parity. Deferred ENG-BALANCE-001 attribute research is not a prerequisite; retain existing modifiers/soft profiles.
+- **Approved implementation baseline (owner2026-10-27):** [001B paired correction](../operations/wizard-001B-balance.md), landed-only consumption, existing damage-soft profile for direct Orbs, existing WIS-based Ignite duration30–45s and corrected001B coefficients. Later tuning must be based on tests/gameplay. No remaining Orb/duration/calibration decision; implementation and release gates remain.
+- **Acceptance / release gates:** design's32 loadouts, caster/shared ownership, hit/miss/grazing, CP/ward lifecycle, defensive contact and other-class regression requirements; separate local implementation instruction, commit/push approval, SQL/config verification, matching Edge deployment and Mik manual Publish/live acceptance. No runtime/catalogue/SQL artifact changed by001B.
+- **Specification sections:** Resources and attributes; Combat resolution; Effects and stances; Character ownership and lifecycle; Failure, diagnostics and verification. Approved future Wizard rule changes only; world heartbeat and current shared attribute math preserved.
+
 ### ENG-COMBAT-003 — Present-fighter equipment fencing
 
 - **Engine area / status / priority:** combat snapshot/commit; `implemented_source`; 1.
@@ -317,6 +326,7 @@ B–H are not implemented or authorized by 001A. Later task preparation may be d
 - **Engine area / status / priority:** combat/content; `deferred`; 18.
 - **Problem or decision:** formula correctness precedes balance changes.
 - **Intended outcome:** evidence-based review without mixing engine repairs and tuning.
+- **Deferred attribute direction (owner2026-10-27, ENG-ABILITY-WIZARD-001B):** reuse this task for [common attribute-model investigation](../design/attribute-model-followup.md): every point can contribute, high values retain soft marginal returns, distinct useful functions across attributes and simple rules. Review existing modifiers/soft/DR, progression/races/items/gems and accuracy/damage/CP/HP/regen/ability consequences when separately authorized. This is not an approved formula, new work start or Wizard prerequisite; status `deferred`, priority18 and existing dependencies remain unchanged.
 - **Dependencies:** stabilized heartbeat/targeting/rewards.
 - **Evidence/current state:** deterministic catalogues exist; no broad audit authorized.
 - **Acceptance criteria:** each proposed change names formula, content and regression fixtures; specification updated for rule changes.

@@ -79,6 +79,7 @@ Current status reconciliation: [2026-10-22 evidence and agreed development seque
 
 - **Status / kind:** DEFERRED; Technical correction / evidence work. Authoritative source disposition: combat/content; `deferred`.
 - **Intent:** evidence-based review without mixing engine repairs and tuning.
+- **Attribute follow-up2026-10-27:** [ENG-ABILITY-WIZARD-001B record](../design/attribute-model-followup.md) reuses ENG-BALANCE-001 for the every-point/soft-marginal-value/distinct-role investigation. DEFERRED, existing roadmap priority18 and stabilized heartbeat/targeting/rewards dependencies are retained. No approved replacement formula, new attribute ID, runtime change or automatic start; current Wizard math remains unchanged.
 - **Approval evidence:** Existing roadmap scope/status only; not fresh implementation or release authorization. Source: [game-engine-roadmap.md:261](game-engine-roadmap.md) line261.
 - **Implementation/runtime boundary:** No implementation, hosted or runtime evidence established by this register; retain dated evidence and limitations in source.
 - **Dependencies / overlaps:** stabilized heartbeat/targeting/rewards.

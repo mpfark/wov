@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-27T00:27:04.133Z",
-  "based_on_source_sha": "ec36640d85f2d375543a352b04482c411aa42855",
+  "updated_at": "2026-10-27T07:50:51Z",
+  "based_on_source_sha": "b696ddb5bbc7a48e33f161e02bdf5d9d97bc3b28",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -809,6 +809,17 @@
     "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails."
   },
   "combat2_operational_work": [
+    {
+      "identity": "ENG-ABILITY-WIZARD-001B — design closure and deferred attribute follow-up",
+      "status": "authored",
+      "sha": "b696ddb5bbc7a48e33f161e02bdf5d9d97bc3b28",
+      "timestamp": "2026-10-27T07:50:51Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex; owner-supplied 001B design decisions",
+      "directly_verified": true,
+      "artifact": "docs/design/wizard-redesign.md",
+      "evidence": "Owner final approval2026-10-27: direct Orbs uses the existing damage-soft profile, Ignite retains min(45,30+positive WIS modifier) seconds and corrected001B coefficients are the first implementation baseline; later tuning must be based on tests/gameplay. All role/status/CP/contact rules remain approved, including landed-only Conflagrate, caster-owned shared Fireball/Orbs Ignite, shared Chilled, direct-only Surge and fixed Wizard reservations. Owner authorizes one documentation-only commit and normal non-force push to origin/main after ancestry/checks; resulting commit SHA is reported separately. Git fetch now succeeds with approved network access; analysed baseline b696ddb5bbc7a48e33f161e02bdf5d9d97bc3b28. Paired60000-trial appendix remains numerical evidence, not Combat2/live acceptance. ENG-BALANCE-001 remains deferred, priority18 and stabilized heartbeat/targeting/rewards dependencies unchanged; current modifier/soft profiles remain Wizard implementation basis. No runtime/catalogue/SQL/migration/Cloud mutation or implementation/deployment/publication is included. Existing rollout statuses, controls, next approved task and unrelated limitations are preserved. This authored record documents approval/preparation; the final delivery report confirms commit/push outcome."
+    },
     {
       "identity": "ENG-COMBAT-HIT-001 creature grazing — source implementation",
       "status": "authored",
