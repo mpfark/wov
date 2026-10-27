@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-27T10:35:24Z",
-  "based_on_source_sha": "28eb17417373e34744fff7b3badc2bc3b624e62a",
+  "updated_at": "2026-10-27T13:41:45Z",
+  "based_on_source_sha": "2dc2cfd1f34ef63b49a9706761bf94b3b93a01a8",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -809,6 +809,17 @@
     "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails."
   },
   "combat2_operational_work": [
+    {
+      "identity": "ENG-ABILITY-WIZARD-001G3A — local effect source identity; producer/persistence OPEN",
+      "status": "authored",
+      "sha": "2dc2cfd1f34ef63b49a9706761bf94b3b93a01a8",
+      "timestamp": "2026-10-27T10:45:03Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex; owner-authorized local001G3A preparation",
+      "directly_verified": true,
+      "artifact": "docs/operations/wizard-001G3A-effect-source-identity.md",
+      "evidence": "First verified exactly three G2 blocker docs, committed2dc2cfd1 and normally pushed to origin/main after ancestry check; clean worktree before G3A. Local config.creature_source tuple captures definition/node_creature.id/spawn_seq from supplied known live source, refuses rebinding/conflicts; optional typed effect/proposal config and decoder reject malformed opted-in metadata. Exact-instance classifier distinguishes current/dead/missing/ambiguous/definition/generation mismatch without fallback. Legacy absence remains unbound and unchanged.31 new tests;426 total tests across14 files passed including Fire/Frost/Arcane, resolver, creature defenses, transport/roundtrip and all-class formula suites. Application TypeScript passed; publication verified36 unchanged records; project-state generation/check and tracked/untracked whitespace checks passed. No actual creature pulse producer found in inspected canonical paths; helper prepares future caller, does not create source authority. Stored JSON/claim roundtrip is local-only; authoritative producer capture, immutability enforcement, native SQL concurrency/lifecycle/persistence and installed parity remain OPEN. Owner approves existing pulse lifetime after death; current modifiers only while original matching source is alive, baseline damage after death/removal, no successor or ambiguous binding fallback, legacy unbound behavior preserved. Decision documented in specification/handoff/roadmap without pulse implementation; no damage/lifetime/Weakened changes. All five F gates and G2 coverage blocker remain OPEN; fixed reservations not server-integrated. Production catalogue36, database authoring, SQL/history, Edge mirrors, UI, other classes and attribute math unchanged. Owner now authorizes one G3A commit/normal push after verification; no Cloud, installation, deployment or Publish. ENG-BALANCE-001 deferred priority/dependencies preserved."
+    },
     {
       "identity": "ENG-ABILITY-WIZARD-001G2 — BLOCKED on authoritative creature pulse source binding",
       "status": "blocked",

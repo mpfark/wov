@@ -11,6 +11,7 @@
  */
 
 import { ownedStackIdentity, sharedStatusIdentity } from './stack-identity';
+import { readCreatureEffectSource } from './effect-source';
 import type {
   NodeSnapshot,
   SnapshotBossAbility,
@@ -626,6 +627,9 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
   const presenceIdentities = new Set<string>();
   const sharedIdentities = new Set<string>();
   for (const [i, effect] of snapshot.effects.entries()) {
+    if (readCreatureEffectSource(effect).kind === 'invalid') {
+      r.errors.push(`snapshot.effects[${i}].config.creature_source: invalid or conflicting source identity`);
+    }
     if (effect.kind === 'offense' && effect.config.offense_mode === 'base_cp_discount'
         && (typeof effect.magnitude !== 'number' || !Number.isSafeInteger(effect.magnitude) || effect.magnitude < 0
           || typeof effect.config.cp_discount_min !== 'number' || !Number.isSafeInteger(effect.config.cp_discount_min)

@@ -220,6 +220,15 @@ export interface SnapshotRewardConfig {
   consumable_level_max_offset: number;
 }
 
+/** Original producer source, carried unchanged in node_effect.config. */
+export interface CreatureEffectSource {
+  creature_id: string;
+  node_creature_id: string;
+  spawn_seq: number;
+}
+
+export type Combat2EffectConfig = Record<string, unknown> & { creature_source?: CreatureEffectSource };
+
 export interface SnapshotEffect {
   id: string;
   kind: string;
@@ -231,7 +240,7 @@ export interface SnapshotEffect {
   source_creature_id: string | null;
   stacks: number;
   magnitude: number | null;
-  config: Record<string, unknown>;
+  config: Combat2EffectConfig;
   expires_at: string | null;
   next_due_at: string | null;
   interval_ms: number | null;
@@ -404,7 +413,7 @@ export interface ProposedEffectInsert {
   source_creature_id?: string | null;
   stacks?: number;
   magnitude?: number | null;
-  config?: Record<string, unknown>;
+  config?: Combat2EffectConfig;
   expires_at?: string | null;
   next_due_at?: string | null;
   interval_ms?: number | null;

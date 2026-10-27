@@ -89,6 +89,12 @@ Force Shield's retained persistent stance formulas are `pool=max(1,m(effective W
 - The triggering hit is already resolved and is not reduced retroactively. Apply the reduction through the existing outgoing-damage ordering before grazing/critical/defender mitigation, preserving existing reduction composition. Sequential later hits see authoritative current effects; no replay may repeat the application or damage.
 - Cover the existing ordinary/opportunity/direct ability/boss primary and secondary attack paths through the common creature-damage boundary. Non-direct sources cannot trigger Frost Armor; any creature-owned outgoing source lacking a Weakened consumer must be identified in the bounded implementation before claiming full outgoing-damage coverage. No environmental or player DoT damage is relabelled as creature direct contact.
 
+### Creature-owned effect-pulse source lifecycle
+
+Owner-approved 2026-10-27 (001G3A): effects continue their existing lifetime after source-death. While the original source is alive with matching node-creature instance and spawn-generation, pulses use that source's current outgoing modifiers. After source-death/removal, baseline effect damage continues without new source modifiers. A new spawn never inherits source identity or supplies modifiers. Missing or ambiguous binding never permits guessing or fallback to another creature. Existing effects without opt-in metadata retain their existing behavior.
+
+The source tuple is the original creature-definition, node-creature instance and spawn-generation, captured at effect creation and preserved through persistence/claim. This is an approved target rule, not implemented pulse reduction: [001G3A local contracts and remaining producer/persistence gates](../operations/wizard-001G3A-effect-source-identity.md) prepare identity only. Weakened pulse coverage remains OPEN. Pulses retain their existing phase and do not trigger Frost Armor.
+
 ## Hit rules, ownership and publication
 
 Retain Combat2's player hit bands, natural-one miss, critical handling, INT accuracy and grazing maximum of three damage. Landed grazing can apply statuses and consume Conflagrate stacks. Orbs and DoT use their existing independent proc/pulse paths. Grasp and Overload use normal direct-spell hit rules and spend CP on resolved misses.
