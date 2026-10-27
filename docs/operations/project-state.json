@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-27T09:43:01Z",
-  "based_on_source_sha": "43b9aabd785ccc8f0f34c319667ba565a5204088",
+  "updated_at": "2026-10-27T10:35:24Z",
+  "based_on_source_sha": "28eb17417373e34744fff7b3badc2bc3b624e62a",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -809,6 +809,17 @@
     "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails."
   },
   "combat2_operational_work": [
+    {
+      "identity": "ENG-ABILITY-WIZARD-001G2 — BLOCKED on authoritative creature pulse source binding",
+      "status": "blocked",
+      "sha": "28eb17417373e34744fff7b3badc2bc3b624e62a",
+      "timestamp": "2026-10-27T10:35:24Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex; owner-authorized local001G2 investigation and mandatory stop",
+      "directly_verified": true,
+      "artifact": "docs/operations/wizard-001G2-source-binding-blocker.md",
+      "evidence": "Fetched origin/main and HEAD match baseline28eb1741. Necessary source authority is absent in inspected repository contracts: source_creature_id references creature definition; no producer captures source node_creature instance/spawn generation for generic character-targeted damaging pulses. Arbitrary config transport and fixture metadata cannot establish producer provenance; installed producers remain unknown, no Cloud access. Owner stop condition applied before gameplay implementation. No helper extraction, typed future contract or new tests introduced.355 existing tests passed across11 Fire/Frost/Arcane, resolver, reactive/mitigation and all-class formula suites. Application TypeScript passed; publication verified36 records; project-state generation/check and git diff --check passed. OPEN Weakened effect-pulse outgoing-reduction gap remains unchanged; direct contact coverage only. Smallest G3 prerequisite: authoritative producer capture/persist/claim source instance+definition+spawn tuple with explicit stale/source-lifetime handling, then resume local consumer/tests. All five F gates remain open, including fixed reservation SQL/preflight/lifecycle/Arena and publication. Only blocker handoff and project-state documents changed; production catalogue36, runtime, authoring, SQL/history, Edge mirrors, UI and other classes untouched. No migration registration, Cloud, deployment, Publish, commit or push. ENG-BALANCE-001 deferral/priority/dependencies and unrelated status preserved."
+    },
     {
       "identity": "ENG-ABILITY-WIZARD-001F — local opt-in Arcane and CP foundation",
       "status": "authored",
