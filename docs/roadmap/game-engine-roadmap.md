@@ -12,6 +12,15 @@ Current E/F rollout (2026-10-22): owner and published Lovable reports confirm 00
 
 Owner-approved bounded test support: [WOV-IDEA-025 scoped test teleport candidate](../operations/idea-025-test-teleport-handoff.md), `implemented_source`, review branch only. Existing gameplay login and private UUID approvals; no general teleport unlock, progression-control change or hosted activation. SQL/parity/enrollment → matching admin-users → Mik manual Publish remain separate gates. This reuses025/ADM-015 and does not replace the execution sequence or close material-grant acceptance.
 
+### ENG-COMBAT-HIT-001 — Creature grazing hits
+
+- **Engine area / status / priority:** Combat2 direct creature attacks; `implemented_source`; normal.
+- **Approved change:** margins -5 through -1 graze for floor(25% of normal magnitude after outgoing reduction), without a cap or minimum damage. Natural 1 misses; natural 20 always lands with existing critical suppression and 1.25x critical damage. Other landed hits retain full normal magnitude.
+- **Coverage:** ordinary attacks, supported opportunities, instant direct abilities and boss primary/secondary casts through `applyCreatureDamage`. Existing RNG, evasion, mitigation, ward accounting, reactive restrictions and reward ownership remain intact; movement and opportunity generation are unchanged. Player hit mechanics and balance formulas are unchanged.
+- **Contact decision:** Holy Shield reacts to non-evaded landed contact, including grazing and fully prevented hits. Future Frost Armor follows that policy; no Frost Armor implementation. Positive-HP-damage triggers remain distinct.
+- **Evidence / remaining gates:** focused resolver, defenses, presentation, formula and server regression suites; [local handoff](../operations/combat-hit-001-grazing-handoff.md). Matching Edge deployment, Mik's manual frontend publication and bounded live verification require separate authorization. No schema or Cloud changes in this task.
+- **Specification sections:** Combat resolution; Effects and stances. This intentionally changes only the approved creature grazing/contact rules.
+
 ### ENG-ABILITY-001 — Ability publication and semantic parity
 
 - **Engine area / status:** ability authority; `implemented_source`.

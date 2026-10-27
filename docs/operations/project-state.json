@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-26T09:03:04.221Z",
+  "updated_at": "2026-10-27T00:27:04.133Z",
   "based_on_source_sha": "ec36640d85f2d375543a352b04482c411aa42855",
   "status_vocabulary": [
     "authored",
@@ -809,6 +809,17 @@
     "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails."
   },
   "combat2_operational_work": [
+    {
+      "identity": "ENG-COMBAT-HIT-001 creature grazing — source implementation",
+      "status": "authored",
+      "sha": null,
+      "timestamp": "2026-10-27T00:27:04.133Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex",
+      "directly_verified": true,
+      "artifact": "docs/operations/combat-hit-001-grazing-handoff.md",
+      "evidence": "Based on fetched origin/main 4024409e5845c006d173d3b8a48778f592b58b8f; prior based_on_source_sha ancestry verified. Localized creature grazing at margins -5..-1, 25% uncapped damage with no new floor; natural/critical/evasion/mitigation/contact/ward ownership preserved. Generated resolver Edge mirror and minimal event wording updated; specification and roadmap record approved contact and future unimplemented Frost Armor rule. Regression run: 984 pass, four unchanged baseline failures reproduced separately (three stale source/state assertions and Windows bash environment failure). App/root TypeScript and build pass. No SQL/schema, Cloud access, deployment, publication, controls or gameplay execution; source does not establish live behavior. Exact commit and artifact hashes in final handoff."
+    },
     {
       "identity": "combat2-browser-legacy-isolation-batch-b-2026-10-02",
       "status": "ready_for_manual_publish",

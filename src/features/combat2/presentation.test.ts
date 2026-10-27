@@ -32,6 +32,8 @@ describe('safe delivered Combat2 message wording', () => {
     [{ kind: 'attack', actor: self, target: wolf, abilityKey: 'power_strike', amount: 0, hitQuality: 'miss' }, 'Your Power Strike misses Wolf.'],
     [{ kind: 'attack', actor: self, target: wolf, abilityKey: 'power_strike', amount: 0, outcomeReason: 'critical_miss' }, 'Your Power Strike misses Wolf (critical miss).'],
     [{ kind: 'creature_attack', actor: wolf, target: self, amount: 0, hitQuality: 'miss' }, 'Wolf misses you.'],
+    [{ kind: 'creature_attack', actor: wolf, target: self, amount: 10, hitQuality: 'glancing' }, 'Wolf grazes you for 10 damage.'],
+    [{ kind: 'creature_attack', actor: wolf, target: self, amount: 0, hitQuality: 'glancing', meta: { absorbed: 10 } }, 'Wolf grazes you for 0 damage (10 absorbed).'],
     [{ kind: 'creature_attack', actor: wolf, target: self, amount: 0 }, 'Wolf deals no damage to you.'],
     [{ kind: 'attack_evaded', abilityKey: 'disengage', actor: wolf, target: self, amount: 0 }, 'You evade Wolf with Disengage.'],
     [{ kind: 'stack_applied', abilityKey: 'envenom', actor: self, target: wolf, amount: 2,

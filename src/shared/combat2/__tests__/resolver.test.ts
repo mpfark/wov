@@ -1,11 +1,182 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import inventory from '@/shared/combat/inventory/active-abilities.json';
 import { TickRandom } from '../rng';
 import { resolveNodeTick } from '../resolver';
-import { buildAbilitySpec } from '../catalog';
+import { buildAbilitySpec, buildAbilityCatalog, type AuthoredAbilityInventory } from '../catalog';
 import type { AbilitySpec } from '../mechanics';
 import type { NodeSnapshot, SnapshotCreature, SnapshotEffect, SnapshotFighter, SnapshotIntent } from '../types';
 
 const NOW = '2026-01-01T00:00:00.000Z';
+describe('ENG-COMBAT-HIT-001 creature grazing', () => {
+  afterEach(() => vi.restoreAllMocks());
+  const hit = (out: ReturnType<typeof resolveNodeTick>) => out.events.find(e => e.kind === 'creature_attack')!;
+  const run = (input = snapshot()) => resolveNodeTick(input, { abilities });
+  function rolls(roll = 10, damage = 41) {
+    vi.spyOn(TickRandom.prototype, 'd20').mockReturnValue(roll);
+    vi.spyOn(TickRandom.prototype, 'roll').mockReturnValue(damage);
+  }
+  function grazing() {
+    return snapshot({ fighters: [fighter({ character_id: 'ch-1', ac: 15 })],
+      creatures: [creature({ hp: 10000, max_hp: 10000, stats: { str: 10 } })] }); // roll 10 + level bonus 4 - AC 15 = -1
+  }
+  function effect(kind: SnapshotEffect['kind'], magnitude: number, config = {}): SnapshotEffect {
+    return { ...absorbEffect(kind, 'ch-1', magnitude), kind, ability_key: kind, config };
+  }
+
+  it.each([[-6, 'miss', 0], [-5, 'glancing', 10], [-1, 'glancing', 10], [0, 'normal', 41], [7, 'normal', 41]] as const)(
+    'margin %i resolves as %s without a grazing cap', (margin, quality, amount) => {
+      rolls();
+      const input = grazing(); input.fighters[0].ac = 14 - margin;
+      expect(hit(run(input))).toMatchObject({ hitQuality: quality, amount });
+    });
+
+  it.each([[1, -100, 'miss', 0], [20, 999, 'strong', 51]] as const)(
+    'natural %i preserves its override and critical multiplier', (roll, ac, quality, amount) => {
+      rolls(roll); const input = grazing(); input.fighters[0].ac = ac;
+      expect(hit(run(input))).toMatchObject({ hitQuality: quality, amount });
+    });
+
+  it('keeps a suppressed natural 20 at full normal damage below AC', () => {
+    rolls(20); const input = grazing(); input.fighters[0].ac = 999;
+    input.effects = [effect('mitigation', 0, { crit_chance_reduction_pct: .05 })];
+    expect(hit(run(input))).toMatchObject({ hitQuality: 'normal', amount: 41, meta: { isCrit: false } });
+  });
+
+  it('rounds outgoing reduction before grazing, then applies percent and flat mitigation', () => {
+    rolls(); const input = grazing();
+    input.effects = [
+      { ...effect('control', .1, { control_mode: 'damage_reduction' }), target_character_id: null, target_creature_id: 'cr-1' },
+      effect('mitigation', .25),
+      { ...effect('mitigation', 1, { mitigation_mode: 'flat' }), id: 'flat' },
+    ];
+    // floor(41*.9)=36; floor(36*.25)=9; 9-floor(9*.25)-1=6.
+    expect(hit(run(input))).toMatchObject({ amount: 6, meta: { outgoingReduced: 5, percentMitigated: 2, flatMitigated: 1 } });
+  });
+
+  it.each([1, 2, 3, 7])('floors grazing magnitude %i without adding minimum damage', damage => {
+    rolls(10, damage);
+    expect(hit(run(grazing())).amount).toBe(Math.floor(damage / 4));
+  });
+
+  it('evasion prevents grazing contact and consumes Disengage only on landed attempts', () => {
+    rolls(); const input = grazing();
+    input.effects = [effect('evasion', 1, { dodge_chance: 1, evasion_source: 'disengage' }),
+      effect('reactive', 12, { once_per_attacker_per_tick: true })];
+    const out = run(input);
+    expect(out.events.some(e => e.kind === 'attack_evaded')).toBe(true);
+    expect(out.effects_delete).toContain('evasion');
+    expect(out.events.some(e => e.kind === 'effect_pulse')).toBe(false);
+    for (const [roll, ac] of [[1, 0], [10, 20]]) {
+      vi.mocked(TickRandom.prototype.d20).mockReturnValue(roll);
+      input.fighters[0].ac = ac;
+      expect(hit(run(input)).hitQuality).toBe('miss');
+      expect(run(input).effects_delete).not.toContain('evasion');
+    }
+  });
+
+  it('allows zero HP damage from mitigation and from absorb with contact reactions', () => {
+    rolls(); const input = grazing();
+    for (const defense of [effect('mitigation', 99, { mitigation_mode: 'flat' }), absorbEffect('ward', 'ch-1', 50)]) {
+      input.effects = [defense, effect('reactive', 12, { once_per_attacker_per_tick: true })];
+      const out = run(input);
+      expect(hit(out)).toMatchObject({ hitQuality: 'glancing', amount: 0 });
+      expect(out.events.filter(e => e.kind === 'effect_pulse' && e.abilityKey === 'reactive')).toHaveLength(1);
+      if (defense.kind === 'absorb') expect(out.effects_update).toContainEqual({ id: 'ward', magnitude: 40 });
+    }
+  });
+
+  it('requires both shield equipment and authored block, and blocks before absorb', () => {
+    rolls(); vi.spyOn(TickRandom.prototype, 'sample').mockReturnValue(0);
+    const input = grazing();
+    const shield = equipped({ slot: 'off_hand', weapon_tag: 'shield', inventory_id: 'shield', base_stats: { ac: 2 } });
+    // Warrior base AC12 + DEX mod1 + shield1 + gear2 =16: margin -2.
+    input.fighters[0].equipment = [shield];
+    input.effects = [effect('block', 99, { block_chance: .95 }), absorbEffect('ward', 'ch-1', 50)];
+    expect(hit(run(input))).toMatchObject({ amount: 0, meta: { blocked: 10, absorbed: 0 } });
+    input.fighters[0].equipment = [];
+    expect(hit(run(input)).meta).toMatchObject({ blocked: 0, absorbed: 10 });
+    input.fighters[0].equipment = [shield]; input.effects.shift();
+    expect(hit(run(input)).meta).toMatchObject({ blocked: 0, absorbed: 10 });
+  });
+
+  it.each(['fighter_entered', 'fighter_exit_requested'] as const)('grazes supported %s opportunities', event_type => {
+    rolls(); const input = grazing();
+    input.pending_events = [{ id: 'transition', event_type, actor_character_id: 'ch-1', actor_creature_id: null,
+      target_character_id: null, target_creature_id: null, payload: { fighter_id: 'f-ch-1', entry_seq: 1 }, occurred_at: NOW }];
+    const out = run(input);
+    expect(hit(out)).toMatchObject({ hitQuality: 'glancing', amount: 10,
+      meta: { opportunityKind: event_type === 'fighter_entered' ? 'entry' : 'exit' } });
+    expect(out.pending_event_ids).toEqual(['transition']);
+  });
+
+  it('grazes engagement-opening contact independently of the player miss', () => {
+    rolls(); const input = grazing(); input.creatures[0].engaged = false; input.creatures[0].ac = 999;
+    input.intents = [abilityIntent('attack', 1, 'ch-1', 'power_strike', 'cr-1')];
+    expect(run(input).events).toContainEqual(expect.objectContaining({ kind: 'creature_attack', hitQuality: 'glancing',
+      meta: expect.objectContaining({ opportunityKind: 'engagement_opening' }) }));
+  });
+
+  it.each([false, true])('grazes direct ability primary and secondary targets (pending cast: %s)', windup => {
+    rolls(); const input = grazing();
+    input.fighters.push(fighter({ character_id: 'ch-2', ac: 19 }));
+    input.boss_abilities = [bossAbility({ targeting: 'tank_plus_others', magnitude: 41, secondary_magnitude: 23,
+      windup_ticks: windup ? 2 : 0 })];
+    if (windup) input.creatures[0].pending_action = pending({ target_mode: 'tank_plus_others', primary_magnitude: 41, secondary_magnitude: 23 });
+    const attacks = run(input).events.filter(e => e.kind === 'creature_attack');
+    expect(attacks).toHaveLength(2);
+    expect(attacks[0]).toMatchObject({ target: { id: 'ch-1' }, hitQuality: 'glancing', amount: 10 });
+    expect(attacks[1]).toMatchObject({ target: { id: 'ch-2' }, hitQuality: 'glancing', amount: 5 });
+  });
+
+  it('persists Force Shield depletion and Holy Shield contact once per attacker, with one attributed death/reward', () => {
+    rolls(); const authored = inventory as AuthoredAbilityInventory;
+    const specs = buildAbilityCatalog(authored.abilities, authored.statuses).specs;
+    const input = grazing(); input.fighters[0].class = 'wizard';
+    input.character_stances = [{ character_id: 'ch-1', ability_key: 'force_shield', reserve_pct: .1, version: 7,
+      state: { ward_remaining: 50 }, activated_at: NOW }];
+    input.effects = [effect('reactive', 12, { once_per_attacker_per_tick: true })];
+    input.effects[0].ability_key = 'holy_shield';
+    input.pending_events = [{ id: 'entry', event_type: 'fighter_entered', actor_character_id: 'ch-1', actor_creature_id: null,
+      target_character_id: null, target_creature_id: null, payload: { fighter_id: 'f-ch-1', entry_seq: 1 }, occurred_at: NOW }];
+    const out = resolveNodeTick(input, { abilities: specs });
+    expect(out.events.filter(e => e.kind === 'effect_pulse' && e.abilityKey === 'holy_shield')).toHaveLength(1);
+    expect(out.stance_updates).toContainEqual(expect.objectContaining({ version: 7, state: { ward_remaining: 30 } }));
+    expect(out.effects_update.some(e => e.id.startsWith('stance:'))).toBe(false);
+    expect(resolveNodeTick(input, { abilities: specs })).toEqual(out);
+    for (const remaining of [10, 5]) {
+      input.character_stances[0].state = { ward_remaining: remaining };
+      input.creatures[0].hp = 1;
+      const killed = resolveNodeTick(input, { abilities: specs });
+      expect(killed.stance_updates).toContainEqual(expect.objectContaining({ state: { ward_remaining: 0 } }));
+      expect(killed.rewards).toHaveLength(1);
+      expect(killed.rewards[0]).toMatchObject({ character_id: 'ch-1', is_killer: true });
+      expect(killed.events.filter(e => e.kind === 'creature_died')).toHaveLength(1);
+      expect(resolveNodeTick(input, { abilities: specs })).toEqual(killed);
+    }
+  });
+
+  it('preserves real RNG calls and damage for a previously landed normal hit', () => {
+    const input = grazing(); input.fighters[0].ac = -100;
+    const d20 = vi.spyOn(TickRandom.prototype, 'd20');
+    const damage = vi.spyOn(TickRandom.prototype, 'roll');
+    const sample = vi.spyOn(TickRandom.prototype, 'sample');
+    const out = run(input);
+    const rollIndex = d20.mock.calls.findIndex(args => args[0].startsWith('creature_attack:'));
+    const damageIndex = damage.mock.calls.findIndex(args => args[0].startsWith('creature_attack:') && args[0].endsWith(':dmg'));
+    const roll = d20.mock.results[rollIndex].value as number;
+    const base = damage.mock.results[damageIndex]?.value as number;
+    expect(hit(out).amount).toBe(roll === 1 ? 0 : roll === 20 ? base + Math.floor(base * .25) : base);
+    const calls = structuredClone({ d20: d20.mock.calls, damage: damage.mock.calls, sample: sample.mock.calls });
+    vi.clearAllMocks();
+    expect(run(input)).toEqual(out);
+    expect({ d20: d20.mock.calls, damage: damage.mock.calls, sample: sample.mock.calls }).toEqual(calls);
+    // The AC change only reclassifies a formerly landed hit if moved into the new band.
+    if (roll > 1 && roll < 20) {
+      input.fighters[0].ac = roll + 5;
+      expect(hit(run(input)).amount).toBe(Math.floor(base / 4));
+    }
+  });
+});
 describe('authored incoming critical chance reduction', () => {
   it('subtracts percentage points, retains natural-20 hit, and ignores expired effects', () => {
     const rolls = vi.spyOn(TickRandom.prototype, 'd20').mockReturnValue(20);
@@ -213,7 +384,10 @@ describe('combat2 resolver', () => {
       const odd = snapshot({ encounter: { ...snapshot().encounter, tick: 0, candidate_tick: 1 },
         fighters: [fighter({ character_id: 'ch-1', cp: 10, max_cp: 50 })] });
       const even = snapshot({ encounter: { ...odd.encounter, tick: 1, candidate_tick: 2 }, fighters: odd.fighters });
-      expect(cpFor(resolveNodeTick(odd, { abilities }), 'ch-1')).toBeUndefined();
+      const oddProposal = resolveNodeTick(odd, { abilities });
+      // A grazing hit may now write the unchanged CP alongside HP.
+      expect(cpFor(oddProposal, 'ch-1') ?? 10).toBe(10);
+      expect(oddProposal.events.some(event => event.kind === 'passive_cp_regen')).toBe(false);
       const proposal = resolveNodeTick(even, { abilities });
       expect(cpFor(proposal, 'ch-1')).toBe(12);
       expect(resolveNodeTick(even, { abilities })).toEqual(proposal);

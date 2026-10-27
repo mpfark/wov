@@ -45,7 +45,9 @@ export function formatCombat2Event(event: Combat2SafeEvent, context: MessageCont
         const noun = String(meta.stackNoun ?? 'stack');
         return `${action} consumes ${meta.stacksConsumed} ${noun} stack${meta.stacksConsumed === 1 ? '' : 's'} and deals ${amount ?? 0} damage to ${target}.`;
       }
-      return damage();
+      return event.kind === 'creature_attack' && event.hitQuality === 'glancing'
+        ? `${action} grazes ${target} for ${amount ?? 0} damage${details.length ? ` (${details.join('; ')})` : ''}.`
+        : damage();
     case 'orb_attack':
       return event.hitQuality === 'miss'
         ? `An orb from ${label} misses ${target}.`

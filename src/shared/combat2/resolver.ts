@@ -10,7 +10,7 @@
 import { getCreatureXp, getXpPenalty } from '../formulas/xp';
 import { getChaGoldMultiplier } from '../formulas/economy';
 import { getPartyXpBonus } from '../combat/pure/party-xp';
-import { getCreatureDamageDie, getCreatureAttackBonus, CREATURE_CRIT_MULT, getEffectiveAC, type WeaponProgressionConfig } from '../formulas/combat';
+import { getCreatureDamageDie, getCreatureAttackBonus, CREATURE_CRIT_MULT, HIT_QUALITY_MULT, getEffectiveAC, type WeaponProgressionConfig } from '../formulas/combat';
 import { getStatModifier } from '../formulas/stats';
 import { effectiveItemStats } from '../formulas/items';
 import { getCpRegen, getEffectiveMaxCp, getEffectiveMaxHp, getEffectiveMaxMp, getMilestoneCpRegen } from '../formulas/resources';
@@ -1410,7 +1410,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     const critChance = Math.max(0, .05 - Math.max(0, critChanceReduction));
     const isCrit = isNatural20 && (critChanceReduction <= 0 ||
       (critChance > 0 && rng.sample(`${stream}:crit_chance`, targetFighter.character_id, tick) < critChance / .05));
-    if (isNat1 || (total < targetFighter.ac && !isNatural20)) {
+    const margin = total - targetFighter.ac;
+    if (isNat1 || (margin < -5 && !isNatural20)) {
       emit({
         kind: 'creature_attack',
         abilityKey: abilityKey ?? undefined,
@@ -1424,7 +1425,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       return;
     }
 
-    // Only an otherwise-landed attack can exercise evasion. Natural/AC misses
+    // Only an otherwise-landed attack (including grazing) can exercise evasion. Natural/AC misses
     // therefore never consume Disengage's guaranteed next-hit charge.
     const evasion = effectsFor(snapshot.effects, targetFighter.character_id, 'evasion')
       .filter(effect => !expiredIds.has(effect.id) && !proposed.effects_delete.includes(effect.id))
@@ -1459,8 +1460,12 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         && !expiredIds.has(effect.id)
         && effect.config?.control_mode === 'damage_reduction')
       .reduce((sum, effect) => sum + Math.max(0, effect.magnitude ?? 0), 0);
-    const base = Math.max(0, Math.floor(unreducedBase * (1 - Math.min(1, outgoingReduction))));
-    const outgoingPrevented = unreducedBase - base;
+    const reducedBase = Math.max(0, Math.floor(unreducedBase * (1 - Math.min(1, outgoingReduction))));
+    const outgoingPrevented = unreducedBase - reducedBase;
+    // Creature grazing has no player-style cap or minimum damage. Natural 20
+    // retains full damage even when its critical bonus has been suppressed.
+    const isGlancing = margin < 0 && !isNatural20;
+    const base = isGlancing ? Math.floor(reducedBase * HIT_QUALITY_MULT.glancing) : reducedBase;
     const critBonus = isCrit ? Math.floor(base * (CREATURE_CRIT_MULT - 1)) : 0;
 
     // Authored mitigation on the target (percent, flat, block, absorb, crit softening).
@@ -1532,7 +1537,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       abilityKey: abilityKey ?? undefined,
       actor: { type: 'creature', id: creature.row.creature_id, name: creature.row.name },
       target: { type: 'character', id: targetFighter.character_id, name: targetFighter.name },
-      hitQuality: isCrit ? 'strong' : 'normal',
+      hitQuality: isGlancing ? 'glancing' : isCrit ? 'strong' : 'normal',
       amount: applied,
       meta: {
         ...(opportunityKind ? { opportunityKind, transitionEventId, spawnSeq: creature.row.spawn_seq } : {}),

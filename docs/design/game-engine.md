@@ -235,6 +235,10 @@ The complete source audit and source-of-truth matrix are recorded in [the target
 
 ## Combat resolution
 
+`ENG-COMBAT-HIT-001` creature grazing rule: for direct creature attacks through `applyCreatureDamage`, margin is `d20 + creature attack bonus - player AC`. Natural 1 misses; a non-natural-20 margin below -5 misses; margins -5 through -1 land as `glancing`; margin 0 or higher retains normal damage. Natural 20 always lands at full normal magnitude, with the existing 1.25x critical rule and authored critical suppression unchanged. Creatures gain neither weak hits nor margin-based strong hits. Player hit qualities, accuracy, AC, damage dice, STR and level scaling are unchanged.
+
+Grazing floors 25% of the normal magnitude after existing outgoing damage reduction and before the existing mitigation pipeline. It has no hard cap and no minimum damage. Existing evasion, percentage/flat mitigation, block and absorb ordering and persistent Force Shield accounting remain intact. This applies to ordinary attacks, supported entry/exit/engagement-opening opportunities, instant direct abilities and boss cast primary/secondary targets. It does not create opportunities or extend attack rolls to periodic/environmental damage. Grazing has distinct combat event wording.
+
 `src/server/combat2/process-node-tick-once.ts` performs exactly one `claimNode → strict decode → player catalogue → captured boss catalogue → resolveNodeTick → commit` chain. It neither re-reads mutable combat state after claim nor retries a commit. `src/shared/combat2/resolver.ts` is a pure function: no IO, wall clock or ambient randomness. RNG streams are seeded from claim-fenced encounter/tick identities.
 
 The resolver's effective order is:
@@ -265,6 +269,8 @@ Ability publication uses shared configured composition and assignment overrides 
 - Presentation may group multiple authoritative rows into one semantic stance but cannot merge their mechanics.
 
 Holy Shield currently consists of a retaliation effect plus its reservation effect and is presented as one semantic stance. Repeated activation is refused. Dropping a stance removes the reservation and does not refund the original activation cost.
+
+`ENG-COMBAT-HIT-001` contact policy: normal, critical and grazing attacks establish landed contact unless evaded. Misses and evasion do not establish contact. Holy Shield may react to grazing and to fully mitigated/blocked/absorbed landed hits, retaining once-per-attacker-per-tick restrictions. Effects explicitly requiring positive HP damage retain that requirement. Approved future Frost Armor design also triggers on landed contact, including grazing and fully absorbed hits; Frost Armor is not implemented by this task.
 
 The audited ability-availability matrix, approved character-scoped stance authority and release sequence are in [combat2-ability-availability-and-persistent-stances.md](combat2-ability-availability-and-persistent-stances.md). Project state remains authoritative for installation and verification evidence.
 
