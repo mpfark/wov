@@ -10,6 +10,7 @@
  * weapon metadata or resources.
  */
 
+import { ownedStackIdentity } from './stack-identity';
 import type {
   NodeSnapshot,
   SnapshotBossAbility,
@@ -662,7 +663,13 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
       r.errors.push(`snapshot.effects[${i}]: stack identity is stale or malformed`);
       continue;
     }
-    const identity = `${creature.id}:${creature.spawn_seq}:${effect.effect_type}:${fighter.id}:${fighter.entry_seq}:${effect.ability_key}`;
+    if (effect.config.stack_grouping !== undefined && effect.config.stack_grouping !== 'caster_status') {
+      r.errors.push(`snapshot.effects[${i}]: unknown stack grouping`);
+    }
+    const identity = effect.config.stack_grouping === 'caster_status'
+      ? ownedStackIdentity(effect.source_character_id, creature.id, creature.spawn_seq, effect.effect_type,
+        fighter.id, fighter.entry_seq)
+      : `${creature.id}:${creature.spawn_seq}:${effect.effect_type}:${fighter.id}:${fighter.entry_seq}:${effect.ability_key}`;
     if (stackIdentities.has(identity)) r.errors.push(`snapshot.effects[${i}]: duplicate stack identity`);
     stackIdentities.add(identity);
   }

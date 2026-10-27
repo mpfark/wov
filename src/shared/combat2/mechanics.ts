@@ -103,6 +103,10 @@ export interface AbilitySpec {
   requiresShield: boolean;
   effectType: string | null;
   stackType: string | null;
+  /** Opt-in grouping for a caster-owned status shared by several abilities. */
+  stackGrouping?: 'caster_status';
+  /** Absent retains the existing attempt-consumption policy. */
+  stackConsumeOn?: 'landed_hit';
   config: Record<string, unknown>;
   /** Strictly authored reusable status applied by this ability, when enabled. */
   appliedStatus: AbilityStatusSpec | null;
@@ -288,6 +292,20 @@ export function resolveMechanicCalc(
   const calc = spec.mechanicCalcs[name];
   if (!calc) return null;
   return evaluateCalc(calc, calcInputs(ctx, spec, `mechanic:${name}`, weaponDie, context));
+}
+
+/** Evaluated only for the explicitly authored shared-owned-status contract. */
+export function resolveOwnedStackConfig(ctx: MechanicContext, spec: AbilitySpec): Record<string, unknown> {
+  return {
+    stack_grouping: spec.stackGrouping,
+    stack_effect_type: spec.appliedStatus!.effectType,
+    stack_duration_ms: Math.max(COMBAT2_TICK_MS, Math.floor(resolveMechanicCalc(ctx, spec, 'stack_duration')!)),
+    stack_interval_ms: COMBAT2_TICK_MS,
+    dot_per_tick: Math.max(0, Math.floor(resolveMechanicCalc(ctx, spec, 'stack_damage')!)),
+    max_stacks: Math.max(1, Math.floor(resolveMechanicCalc(ctx, spec, 'max_stacks')!)),
+    damage_type: spec.appliedStatus!.damageType,
+    stack_noun: spec.appliedStatus!.stackNoun,
+  };
 }
 
 /** Weapon die for this actor + spec, or a rejection when the contract is short. */
@@ -851,6 +869,10 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
         pulse_damage: pulseDamage,
         source_fighter_id: ctx.actor.id,
         source_entry_seq: ctx.actor.entry_seq,
+        ...(spec.stackGrouping === 'caster_status' ? {
+          ...resolveOwnedStackConfig(ctx, spec),
+          pulse_damage: Math.max(1, Math.floor(resolveMechanicCalc(ctx, spec, 'pulse_damage')!)),
+        } : {}),
       }));
       return outcome;
     }
@@ -902,9 +924,10 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
       multiplier: 1 + Math.max(0, perStack) * stacks,
       context: { consumed_stacks: stacks, active_stacks: stacks },
     });
-    outcome.meta_stacks_consumed = stacks;
+    const consumed = spec.stackConsumeOn === 'landed_hit' && (outcome.landedHits ?? 0) === 0 ? 0 : stacks;
+    outcome.meta_stacks_consumed = consumed;
     const attack = outcome.events.find(event => event.kind === 'attack');
-    if (attack) attack.meta = { ...(attack.meta ?? {}), stacksConsumed: stacks,
+    if (attack) attack.meta = { ...(attack.meta ?? {}), stacksConsumed: consumed,
       stackNoun: spec.config.stack_noun ?? 'stack' };
     return outcome;
   },

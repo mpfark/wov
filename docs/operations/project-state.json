@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-27T07:50:51Z",
-  "based_on_source_sha": "b696ddb5bbc7a48e33f161e02bdf5d9d97bc3b28",
+  "updated_at": "2026-10-27T08:28:55Z",
+  "based_on_source_sha": "7b42e1bfb96359a3b81e04baadc08df3969e660f",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -809,6 +809,17 @@
     "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails."
   },
   "combat2_operational_work": [
+    {
+      "identity": "ENG-ABILITY-WIZARD-001D — local opt-in Fire foundation",
+      "status": "authored",
+      "sha": "7b42e1bfb96359a3b81e04baadc08df3969e660f",
+      "timestamp": "2026-10-27T08:28:55Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex; owner-authorized local001D implementation",
+      "directly_verified": true,
+      "artifact": "src/shared/combat2/__tests__/fire-foundation.test.ts",
+      "evidence": "Local uncommitted canonical Combat2 implementation only. Explicit authored stack_grouping=caster_status and stack_consume_on=landed_hit support shared Fireball/Orbs Ignite identity with caster/fighter-entry/creature-spawn isolation, evaluated WIS magnitude/30-45s duration and soft Orb damage, cap/refresh, strict decoding and current working-state consumption. Only test fixtures opt in. Production catalogue/authoring and all other-class specs/defaults remain unchanged; CP costs/reservations, SQL/migration files, UI and Edge mirrors untouched.273 targeted tests passed across10 files, including35 new Fire tests and retained resolver/status/stack/catalog/publication/roundtrip/server transport cases; publication check verifies36 unchanged production records. Application TypeScript validation and final scope checks are reported in the task handoff. Pure deterministic proposals/replay tests are not installed SQL idempotency or live proof. Shared modifiers/profiles and one heartbeat preserved. Not deploy-ready: D-G configured publication, CP/server transactions, mirrors and separately approved SQL/release gates remain. Migration-history blocking is not bypassed. No Cloud/deployment/Publish/commit/push; existing controls, next approved task and deferred ENG-BALANCE-001 priority18/dependencies retained. SHA denotes analysed origin/main baseline, not a commit containing these local edits."
+    },
     {
       "identity": "ENG-ABILITY-WIZARD-001B — design closure and deferred attribute follow-up",
       "status": "authored",

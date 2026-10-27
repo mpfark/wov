@@ -269,6 +269,33 @@ export function buildAbilitySpec(
     };
   }
 
+  const grouping = config.stack_grouping;
+  const consumeOn = config.stack_consume_on;
+  if (grouping !== undefined && grouping !== 'caster_status') {
+    return reject('invalid_calc', 'unknown stack_grouping');
+  }
+  if (consumeOn !== undefined && (consumeOn !== 'landed_hit' || mechanic !== 'stack_consume')) {
+    return reject('invalid_calc', 'stack_consume_on requires a stack finisher and landed_hit');
+  }
+  if (grouping === 'caster_status') {
+    if (mechanic === 'stack_consume') {
+      if (typeof config.stack_type !== 'string' || !config.stack_type) {
+        return reject('invalid_calc', 'shared owned finisher requires stack_type');
+      }
+    } else {
+      if (!appliedStatus || appliedStatus.classification !== 'dot' || appliedStatus.tickIntervalMs !== 2000
+          || !((mechanic === 'spell_attack' && appliedStatus.trigger === 'ability_hit')
+            || (mechanic === 'stack_apply' && activation === 'stance' && targetType === 'self'
+              && appliedStatus.trigger === 'successful_pulse_hit'))) {
+        return reject('invalid_calc', 'shared owned application requires a two-second DoT and matching trigger');
+      }
+      for (const name of ['stack_damage', 'stack_duration', 'max_stacks',
+        ...(mechanic === 'stack_apply' ? ['pulse_damage'] : [])]) {
+        if (!mechanicCalcs[name]) return reject('missing_mechanic_calc', name);
+      }
+    }
+  }
+
   const spec: AbilitySpec = {
     abilityKey: record.abilityKey,
     classKey: record.classKey,
@@ -292,6 +319,8 @@ export function buildAbilitySpec(
     requiresShield: readBool(config, 'requires_shield'),
     effectType: typeof config.effect_type === 'string' ? config.effect_type : null,
     stackType: typeof config.stack_type === 'string' ? config.stack_type : null,
+    ...(grouping === 'caster_status' ? { stackGrouping: grouping } : {}),
+    ...(consumeOn === 'landed_hit' ? { stackConsumeOn: consumeOn } : {}),
     config,
     appliedStatus,
     support,
