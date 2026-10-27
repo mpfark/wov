@@ -103,8 +103,12 @@ export interface AbilitySpec {
   requiresShield: boolean;
   effectType: string | null;
   stackType: string | null;
-  /** Opt-in grouping for a caster-owned status shared by several abilities. */
-  stackGrouping?: 'caster_status';
+  /** Explicit ownership of status stack groups; absent preserves existing semantics. */
+  stackGrouping?: 'caster_status' | 'creature_status';
+  /** Non-consuming direct-attack rider using the existing active_stacks calc context. */
+  sharedStackType?: string;
+  /** Opt-in landed direct-contact policy on an existing self control stance. */
+  contactDebuff?: string;
   /** Absent retains the existing attempt-consumption policy. */
   stackConsumeOn?: 'landed_hit';
   config: Record<string, unknown>;
@@ -127,6 +131,7 @@ export interface MechanicContext {
   targetAbsorb?: number;
   /** Existing stacks of the relevant stack type on the target. */
   existingStacks?: number;
+  sharedStacks?: number;
   /** Sum of authored damage amplification on the target. */
   amplification?: number;
   /** Sunder-style AC reduction on the creature. */
@@ -665,7 +670,14 @@ export type MechanicHandler = (ctx: MechanicContext, spec: AbilitySpec) => Mecha
 export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
   weapon_attack: (ctx, spec) => offensiveHit(ctx, spec, 'weapon_attack'),
 
-  spell_attack: (ctx, spec) => offensiveHit(ctx, spec, 'spell_attack'),
+  spell_attack: (ctx, spec) => {
+    if (!spec.sharedStackType) return offensiveHit(ctx, spec, 'spell_attack');
+    const stacks = Math.max(0, ctx.sharedStacks ?? 0);
+    return offensiveHit(ctx, spec, 'spell_attack', {
+      multiplier: 1 + stacks * Math.max(0, resolveMechanicCalc(ctx, spec, 'per_stack_multiplier', { active_stacks: stacks }) ?? 0),
+      context: { active_stacks: stacks },
+    });
+  },
 
   multi_attack: (ctx, spec) => {
     const merged = emptyOutcome();
@@ -834,7 +846,13 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
     return outcome;
   },
 
-  control_debuff: (ctx, spec) => creatureDebuff(ctx, spec, 'control'),
+  control_debuff: (ctx, spec) => {
+    if (!spec.contactDebuff) return creatureDebuff(ctx, spec, 'control');
+    const outcome = characterBuff(ctx, spec, 'contact_status');
+    for (const effect of outcome.effects) effect.config = { ...effect.config,
+      contact_effect_type: spec.contactDebuff, contact_duration_ms: resolveDurationMs(ctx, spec) };
+    return outcome;
+  },
 
   stack_apply: (ctx, spec) => {
     const outcome = emptyOutcome();

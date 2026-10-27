@@ -16,7 +16,7 @@ import { effectiveItemStats } from '../formulas/items';
 import { getCpRegen, getEffectiveMaxCp, getEffectiveMaxHp, getEffectiveMaxMp, getMilestoneCpRegen } from '../formulas/resources';
 import { applyMitigationPipeline, readMitigationParams } from './mitigation';
 import { TickRandom } from './rng';
-import { ownedStackIdentity } from './stack-identity';
+import { ownedStackIdentity, sharedStatusIdentity } from './stack-identity';
 import { combat2PulseDue, combat2TickTiming, combat2TicksForMs, readCombat2TickTiming } from './time';
 import {
   MECHANIC_HANDLERS,
@@ -277,7 +277,8 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       emit({ kind: 'item_proc_heal', actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
         amount: healed, meta: { inventoryId: selected.item.inventory_id, itemId: selected.item.item_id, text: selected.proc.text } });
     } else if (target.hp > 0) {
-      const dealt = Math.min(target.hp, Math.floor(selected.proc.value));
+      // Existing item procs retain their policy; only explicitly shared status amplification opts in.
+      const dealt = Math.min(target.hp, Math.floor(selected.proc.value * amplificationFor(target, 'proc', true)));
       target.hp -= dealt; target.damaged = true; target.dirty = true;
       if (target.hp === 0 && target.killedBy === null) target.killedBy = actor.fighter.character_id;
       qualify(target, actor.fighter.character_id, 'damage');
@@ -301,18 +302,64 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     if (nodeCreatureId === undefined && spawnSeq === undefined) return true;
     return nodeCreatureId === target.row.id && spawnSeq === target.row.spawn_seq;
   };
-  const amplificationFor = (target: WorkingCreature, source: AmplifiedSource): number => {
+  type SharedStatusState = { effect: SnapshotEffect | null; insert: ProposedTick['effects_insert'][number] | null };
+  const sharedStatuses = new Map<string, SharedStatusState>();
+  for (const effect of snapshot.effects) {
+    if (effect.config?.stack_grouping !== 'creature_status' || expiredIds.has(effect.id)
+        || !['amplification', 'control'].includes(effect.kind) || !effect.target_creature_id) continue;
+    const target = creatures.get(effect.target_creature_id);
+    if (target && effectAppliesToSpawn(effect, target)) {
+      sharedStatuses.set(sharedStatusIdentity(target.row.id, target.row.spawn_seq, effect.effect_type), { effect, insert: null });
+    }
+  }
+  const sharedRows = () => [...sharedStatuses.values()].map(state => state.insert ?? state.effect!);
+  const applySharedStatus = (effect: ProposedTick['effects_insert'][number], increment: boolean): number => {
+    const key = sharedStatusIdentity(effect.config!.node_creature_id, effect.config!.spawn_seq, effect.effect_type);
+    const prior = sharedStatuses.get(key);
+    const previous = prior?.insert ?? prior?.effect;
+    const cap = Math.max(1, Number(effect.config!.max_stacks));
+    effect.stacks = increment ? Math.min(cap, (previous?.stacks ?? 0) + 1) : 1;
+    // A group retains its original attribution; refresh events identify the current applier.
+    if (previous) {
+      effect.source_character_id = previous.source_character_id;
+      effect.ability_key = previous.ability_key;
+    }
+    if (prior?.effect) {
+      proposed.effects_delete.push(prior.effect.id);
+      proposed.effects_update = proposed.effects_update.filter(row => row.id !== prior.effect!.id);
+    }
+    if (prior?.insert) proposed.effects_insert = proposed.effects_insert.filter(row => row !== prior.insert);
+    proposed.effects_insert = proposed.effects_insert.filter(row => !(row.kind === effect.kind
+      && row.effect_type === effect.effect_type && row.target_creature_id === effect.target_creature_id
+      && row.config?.node_creature_id === effect.config!.node_creature_id
+      && row.config?.spawn_seq === effect.config!.spawn_seq && row.config?.stack_grouping !== 'creature_status'));
+    // An opted-in shared status replaces the old standalone form, not an additional multiplier.
+    for (const legacy of snapshot.effects.filter(row => row.kind === effect.kind
+      && row.effect_type === effect.effect_type && row.target_creature_id === effect.target_creature_id
+      && row.config?.node_creature_id === effect.config!.node_creature_id
+      && row.config?.spawn_seq === effect.config!.spawn_seq && row.config?.stack_grouping !== 'creature_status')) {
+      if (!proposed.effects_delete.includes(legacy.id)) proposed.effects_delete.push(legacy.id);
+    }
+    proposed.effects_insert.push(effect);
+    sharedStatuses.set(key, { effect: null, insert: effect });
+    return effect.stacks;
+  };
+  const amplificationFor = (target: WorkingCreature, source: AmplifiedSource, sharedOnly = false): number => {
     const strongest = new Map<string, number>();
     const rows = [
       ...snapshot.effects.filter(effect => !expiredIds.has(effect.id)
-        && !proposed.effects_delete.includes(effect.id)),
-      ...proposed.effects_insert,
+        && !proposed.effects_delete.includes(effect.id) && effect.config?.stack_grouping !== 'creature_status'),
+      ...proposed.effects_insert.filter(effect => effect.config?.stack_grouping !== 'creature_status'),
+      ...sharedRows(),
     ];
     for (const effect of rows) {
       if (effect.kind !== 'amplification' || !effectAppliesToSpawn(effect, target)) continue;
       const eligible = effect.config?.eligible_sources;
       if (!Array.isArray(eligible) || !eligible.includes(source)) continue;
-      const pct = Number(effect.config?.damage_taken_pct ?? 0);
+      const shared = effect.config?.stack_grouping === 'creature_status';
+      if (sharedOnly && !shared) continue;
+      if (!shared && sharedStatuses.has(sharedStatusIdentity(target.row.id, target.row.spawn_seq, effect.effect_type))) continue;
+      const pct = Number(effect.config?.damage_taken_pct ?? 0) * (shared ? effect.stacks ?? 1 : 1);
       if (!Number.isFinite(pct) || pct <= 0) continue;
       strongest.set(effect.effect_type, Math.max(strongest.get(effect.effect_type) ?? 0, pct));
     }
@@ -375,7 +422,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
     const eligibleSources = Array.isArray(status.modifier.eligible_sources)
       ? status.modifier.eligible_sources.filter((value): value is string => typeof value === 'string')
       : [];
-    outcome.effects.push({
+    const appliedEffect: ProposedTick['effects_insert'][number] = {
       kind: status.classification === 'dot' ? 'dot' : 'amplification',
       effect_type: status.effectType,
       ability_key: spec.abilityKey,
@@ -395,11 +442,16 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       interval_ms: intervalMs,
       last_pulse_tick: null,
       is_reservation: false,
-    });
+    };
+    if (spec.stackGrouping === 'creature_status') {
+      appliedEffect.config!.stack_grouping = 'creature_status';
+      appliedEffect.config!.creature_id = target.row.creature_id;
+      applySharedStatus(appliedEffect, true);
+    } else outcome.effects.push(appliedEffect);
     outcome.events.push({ kind: 'status_applied', abilityKey: spec.abilityKey,
       actor: { type: 'character', id: actor.fighter.character_id, name: actor.fighter.name },
       target: { type: 'creature', id: target.row.creature_id, name: target.row.name },
-      amount: 1, meta: { status: status.key, stacks: 1, maxStacks: statusMaxStacks(status),
+      amount: appliedEffect.stacks, meta: { status: status.key, stacks: appliedEffect.stacks, maxStacks: statusMaxStacks(status),
         durationMs, chancePct: status.chancePct } });
   };
   const eligibleParty = (source: WorkingCharacter): WorkingCharacter[] => [...chars.values()]
@@ -1037,6 +1089,9 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         )
       : [];
 
+    const sharedStack = spec.sharedStackType && targetCreature
+      ? sharedStatuses.get(sharedStatusIdentity(targetCreature.row.id, targetCreature.row.spawn_seq, spec.sharedStackType))
+      : undefined;
     const ctx: MechanicContext = {
       rng,
       nowMs,
@@ -1048,6 +1103,7 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
       weaponProgression: deps.weaponProgression,
       existingStacks: spec.stackGrouping === 'caster_status' ? ownedStack?.stacks ?? 0
         : stackEffects.reduce((sum, e) => sum + Math.max(1, e.stacks), 0),
+      sharedStacks: (sharedStack?.insert ?? sharedStack?.effect)?.stacks ?? 0,
       amplification: targetCreature ? amplificationFor(targetCreature, 'ability') : 0,
       creatureAcReduction: targetCreature
         ? snapshot.effects
@@ -1508,8 +1564,13 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         && effect.target_creature_id === creature.row.creature_id
         && effectAppliesToSpawn(effect, creature)
         && !expiredIds.has(effect.id)
+        && effect.config?.control_mode === 'damage_reduction'
+        && effect.config?.stack_grouping !== 'creature_status'
+        && !sharedStatuses.has(sharedStatusIdentity(creature.row.id, creature.row.spawn_seq, effect.effect_type)))
+      .reduce((sum, effect) => sum + Math.max(0, effect.magnitude ?? 0), 0)
+      + sharedRows().filter(effect => effect.kind === 'control' && effectAppliesToSpawn(effect, creature)
         && effect.config?.control_mode === 'damage_reduction')
-      .reduce((sum, effect) => sum + Math.max(0, effect.magnitude ?? 0), 0);
+        .reduce((sum, effect) => sum + Math.max(0, effect.magnitude ?? 0), 0);
     const reducedBase = Math.max(0, Math.floor(unreducedBase * (1 - Math.min(1, outgoingReduction))));
     const outgoingPrevented = unreducedBase - reducedBase;
     // Creature grazing has no player-style cap or minimum damage. Natural 20
@@ -1603,6 +1664,26 @@ export function resolveNodeTick(snapshot: NodeSnapshot, deps: ResolveDeps): Prop
         ...(outgoingPrevented > 0 ? { outgoingReduced: outgoingPrevented } : {}),
       },
     });
+
+    // Landed direct contact is established even when mitigation/absorption dealt zero HP damage.
+    // This is deliberately after damage settlement: only subsequent attacks see the debuff.
+    for (const effect of effectsFor(snapshot.effects, targetFighter.character_id, 'contact_status')) {
+      if (expiredIds.has(effect.id) || proposed.effects_delete.includes(effect.id) || creature.hp <= 0) continue;
+      const duration = Number(effect.config.contact_duration_ms);
+      applySharedStatus({
+        kind: 'control', effect_type: String(effect.config.contact_effect_type), ability_key: effect.ability_key,
+        target_creature_id: creature.row.creature_id, source_character_id: effect.source_character_id,
+        stacks: 1, magnitude: effect.magnitude,
+        config: { stack_grouping: 'creature_status', max_stacks: 1, control_mode: 'damage_reduction',
+          node_creature_id: creature.row.id, creature_id: creature.row.creature_id, spawn_seq: creature.row.spawn_seq,
+          ...combat2TickTiming(tick, duration) },
+        expires_at: new Date(nowMs + duration).toISOString(), is_reservation: false,
+      }, false);
+      emit({ kind: 'status_applied', abilityKey: effect.ability_key ?? undefined,
+        actor: { type: 'character', id: targetFighter.character_id, name: targetFighter.name },
+        target: { type: 'creature', id: creature.row.creature_id, name: creature.row.name }, amount: 1,
+        meta: { status: effect.config.contact_effect_type, stacks: 1, maxStacks: 1, durationMs: duration } });
+    }
 
     // ── reactive retaliation ────────────────────────────────────
     // Authored trigger only: a landed attack against the effect's owner. The

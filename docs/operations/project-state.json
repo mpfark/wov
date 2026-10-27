@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-27T08:28:55Z",
-  "based_on_source_sha": "7b42e1bfb96359a3b81e04baadc08df3969e660f",
+  "updated_at": "2026-10-27T09:06:46Z",
+  "based_on_source_sha": "0c2ebf132c3e222cba28341f526ae7eea57e8df4",
   "status_vocabulary": [
     "authored",
     "committed",
@@ -809,6 +809,17 @@
     "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails."
   },
   "combat2_operational_work": [
+    {
+      "identity": "ENG-ABILITY-WIZARD-001E — local opt-in Frost foundation",
+      "status": "authored",
+      "sha": "0c2ebf132c3e222cba28341f526ae7eea57e8df4",
+      "timestamp": "2026-10-27T09:06:46Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Codex; owner-authorized local001E implementation",
+      "directly_verified": true,
+      "artifact": "src/shared/combat2/__tests__/frost-foundation.test.ts",
+      "evidence": "Local uncommitted canonical Combat2 preparation against fetched origin/main0c2ebf13. Authored creature_status groups provide shared Chilled cap5/10s refresh and separate2%-per-stack amplification, non-consuming Grasp with typed active_stacks and12% rider/20CP fixture, and self-control-stance contact_debuff policy for Weakened10%/10s. Shared working state preserves pre-hit Frostbolt/Armor triggering damage and applies changes to subsequent actions/hits; strict decoder checks grouping/spawn/state and source attribution is retained.335 targeted tests passed across14 files including35 new Frost and35 retained Fire tests, resolver/status/stack/catalog/publication/roundtrip/reactive/defense/mitigation/server cases. Application TypeScript, publication and final scope checks are reported in the task handoff. Ordinary/opportunity/instant/telegraphed primary/secondary creature paths covered; generic character-targeted effect-pulses bypass outgoing reduction and intentionally do not trigger Armor, remaining bounded F/G coverage gate before full Weakened claim. No environmental damage authority introduced. Production catalogue/authoring, SQL/migrations, stance keys/transactions, CP prices/reservations, UI and Edge mirrors unchanged; no other-class/default or attribute/formula change. Not deploy-ready. No game Cloud/backend access or mutation, deployment/Publish/commit/push; Git fetch only. Existing state evidence, controls, next task and deferred ENG-BALANCE-001 priority/dependencies retained. SHA is analysed baseline, not a commit containing local edits."
+    },
     {
       "identity": "ENG-ABILITY-WIZARD-001D — local opt-in Fire foundation",
       "status": "authored",

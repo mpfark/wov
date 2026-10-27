@@ -271,7 +271,7 @@ export function buildAbilitySpec(
 
   const grouping = config.stack_grouping;
   const consumeOn = config.stack_consume_on;
-  if (grouping !== undefined && grouping !== 'caster_status') {
+  if (grouping !== undefined && grouping !== 'caster_status' && grouping !== 'creature_status') {
     return reject('invalid_calc', 'unknown stack_grouping');
   }
   if (consumeOn !== undefined && (consumeOn !== 'landed_hit' || mechanic !== 'stack_consume')) {
@@ -294,6 +294,32 @@ export function buildAbilitySpec(
         if (!mechanicCalcs[name]) return reject('missing_mechanic_calc', name);
       }
     }
+  }
+  if (grouping === 'creature_status' && (mechanic !== 'spell_attack' || !appliedStatus
+      || appliedStatus.classification !== 'damage_amp' || appliedStatus.trigger !== 'ability_hit')) {
+    return reject('invalid_calc', 'shared creature application requires a landed spell damage_amp status');
+  }
+  const sharedStackType = config.shared_stack_type;
+  let sharedEffectType: string | undefined;
+  if (sharedStackType !== undefined) {
+    if (typeof sharedStackType !== 'string' || !sharedStackType || mechanic !== 'spell_attack'
+        || !mechanicCalcs.per_stack_multiplier || grouping !== undefined) {
+      return reject('invalid_calc', 'shared stack rider requires a spell, a status key and per_stack_multiplier');
+    }
+    const row = statusRows[sharedStackType];
+    if (!row) return reject('missing_status_definition', sharedStackType);
+    const problems = validateStatusDefinition(row, REQUIRED_STATUS_CONTRACTS.find(c => c.key === sharedStackType));
+    if (row.classification !== 'damage_amp' || problems.length) {
+      return reject('invalid_status_definition', problems.join('; ') || 'shared stack rider requires damage_amp');
+    }
+    sharedEffectType = row.effect_type!;
+  }
+  const contactDebuff = config.contact_debuff;
+  if (contactDebuff !== undefined && (typeof contactDebuff !== 'string' || !contactDebuff
+      || mechanic !== 'control_debuff' || activation !== 'stance' || targetType !== 'self'
+      || config.control_mode !== 'damage_reduction' || !durationCalc
+      || !['multiplier', 'percent'].includes(amountCalc?.unit ?? ''))) {
+    return reject('invalid_calc', 'contact debuff requires a self control stance, fractional magnitude and duration');
   }
 
   const spec: AbilitySpec = {
@@ -319,8 +345,10 @@ export function buildAbilitySpec(
     requiresShield: readBool(config, 'requires_shield'),
     effectType: typeof config.effect_type === 'string' ? config.effect_type : null,
     stackType: typeof config.stack_type === 'string' ? config.stack_type : null,
-    ...(grouping === 'caster_status' ? { stackGrouping: grouping } : {}),
+    ...(grouping === 'caster_status' || grouping === 'creature_status' ? { stackGrouping: grouping } : {}),
     ...(consumeOn === 'landed_hit' ? { stackConsumeOn: consumeOn } : {}),
+    ...(sharedEffectType ? { sharedStackType: sharedEffectType } : {}),
+    ...(typeof contactDebuff === 'string' ? { contactDebuff } : {}),
     config,
     appliedStatus,
     support,

@@ -10,7 +10,7 @@
  * weapon metadata or resources.
  */
 
-import { ownedStackIdentity } from './stack-identity';
+import { ownedStackIdentity, sharedStatusIdentity } from './stack-identity';
 import type {
   NodeSnapshot,
   SnapshotBossAbility,
@@ -616,9 +616,38 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
   }
   const stackIdentities = new Set<string>();
   const presenceIdentities = new Set<string>();
+  const sharedIdentities = new Set<string>();
   for (const [i, effect] of snapshot.effects.entries()) {
     if (effect.interval_ms !== null && !readCombat2TickTiming(effect.config)) {
       r.errors.push(`snapshot.effects[${i}]: periodic tick timing is malformed`);
+    }
+    if (effect.kind === 'contact_status') {
+      const fighter = snapshot.fighters.find(row => row.character_id === effect.target_character_id);
+      if (!fighter || effect.source_character_id !== fighter.character_id
+          || effect.config.target_fighter_id !== fighter.id || effect.config.target_entry_seq !== fighter.entry_seq
+          || typeof effect.config.contact_effect_type !== 'string' || !effect.config.contact_effect_type
+          || typeof effect.config.contact_duration_ms !== 'number' || !Number.isFinite(effect.config.contact_duration_ms)
+          || effect.config.contact_duration_ms <= 0 || effect.config.control_mode !== 'damage_reduction'
+          || !Number.isFinite(effect.magnitude) || effect.magnitude! <= 0 || effect.magnitude! > 1) {
+        r.errors.push(`snapshot.effects[${i}]: contact status policy is malformed or stale`);
+      }
+    }
+    if (effect.config.stack_grouping === 'creature_status') {
+      const creature = snapshot.creatures.find(row => row.id === effect.config.node_creature_id);
+      const max = effect.config.max_stacks;
+      if (!creature || creature.creature_id !== effect.target_creature_id
+          || creature.creature_id !== effect.config.creature_id || creature.spawn_seq !== effect.config.spawn_seq
+          || !['amplification', 'control'].includes(effect.kind)
+          || !Number.isSafeInteger(effect.stacks) || effect.stacks < 1
+          || typeof max !== 'number' || !Number.isSafeInteger(max) || max < 1 || effect.stacks > max
+          || !effect.expires_at || !readCombat2TickTiming(effect.config)
+          || effect.interval_ms !== null || effect.next_due_at !== null) {
+        r.errors.push(`snapshot.effects[${i}]: shared creature status is malformed or stale`);
+      }
+      const identity = sharedStatusIdentity(effect.config.node_creature_id, effect.config.spawn_seq, effect.effect_type);
+      if (sharedIdentities.has(identity)) r.errors.push(`snapshot.effects[${i}]: duplicate shared creature status`);
+      sharedIdentities.add(identity);
+      continue;
     }
     if (effect.config.presence_effect === true || effect.kind === 'party_regen' || effect.kind === 'aura') {
       const source = snapshot.fighters.find(row => row.character_id === effect.source_character_id);
