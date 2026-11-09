@@ -19,7 +19,7 @@ export function applyTick(prev: NodeSnapshot, out: ProposedTick, intents: NodeSn
     const cr = next.creatures.find(x => x.id === c.id);
     if (!cr) continue;
     for (const k of ['hp', 'is_alive', 'engaged', 'pending_action', 'tank_fighter_id'] as const) {
-      if (c[k] !== undefined) (cr as Record<string, unknown>)[k] = c[k];
+      if (c[k] !== undefined) (cr as unknown as Record<string, unknown>)[k] = c[k];
     }
   }
   const dead = new Set(out.effects_delete);
