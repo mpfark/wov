@@ -4127,6 +4127,74 @@ export type Database = {
           },
         ]
       }
+      gameplay_test_destination: {
+        Row: {
+          account_id: string
+          character_id: string
+          node_id: string
+        }
+        Insert: {
+          account_id: string
+          character_id: string
+          node_id: string
+        }
+        Update: {
+          account_id?: string
+          character_id?: string
+          node_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gameplay_test_destination_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gameplay_test_destination_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gameplay_test_teleport_receipt: {
+        Row: {
+          account_id: string
+          character_id: string
+          created_at: string
+          destination_node_id: string
+          request_id: string
+          result: Json
+        }
+        Insert: {
+          account_id: string
+          character_id: string
+          created_at?: string
+          destination_node_id: string
+          request_id: string
+          result: Json
+        }
+        Update: {
+          account_id?: string
+          character_id?: string
+          created_at?: string
+          destination_node_id?: string
+          request_id?: string
+          result?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gameplay_test_teleport_receipt_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guide_categories: {
         Row: {
           created_at: string
@@ -7856,6 +7924,19 @@ export type Database = {
       find_character_id_by_name: { Args: { _name: string }; Returns: string }
       forge_soulring: {
         Args: { p_character_id: string; p_stats: Json }
+        Returns: Json
+      }
+      gameplay_test_teleport_access_internal: {
+        Args: { _actor: string; _character: string }
+        Returns: Json
+      }
+      gameplay_test_teleport_internal: {
+        Args: {
+          _actor: string
+          _character: string
+          _destination: string
+          _request: string
+        }
         Returns: Json
       }
       gem_application_internal: {
