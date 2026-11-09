@@ -1,0 +1,790 @@
+[
+  {
+    "seed": "g-a",
+    "out": {
+      "tick": 6,
+      "characters": [
+        {
+          "id": "hero",
+          "hp": 399,
+          "cp": 150,
+          "mp": 0,
+          "died": false
+        }
+      ],
+      "creatures": [
+        {
+          "id": "spawn",
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "hp": 295,
+          "is_alive": true,
+          "damaged": true,
+          "hostile_attempt": true,
+          "pending_action": null,
+          "tank_fighter_id": "f-hero"
+        }
+      ],
+      "effects_insert": [
+        {
+          "kind": "stack_source",
+          "effect_type": "poison",
+          "ability_key": "envenom",
+          "target_character_id": "hero",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0.3192820323027551,
+          "config": {
+            "trigger": "on_hit",
+            "resolved_by": "combat-tick",
+            "consumes_all_cp": true,
+            "mutually_exclusive_with": [
+              "ignite"
+            ],
+            "status_key": "poison",
+            "status_label": "Poison",
+            "status_classification": "dot",
+            "status_trigger": "weapon_hit",
+            "status_chance_pct": null,
+            "status_enabled": true,
+            "effect_type": "poison",
+            "stack_noun": "poison",
+            "tick_rate_ms": 2000,
+            "dot_stat_mult": 1.2,
+            "dot_global_mult": 0.67,
+            "dot_stat": "dex",
+            "dot_duration_ms": 25000,
+            "max_stacks_calc": {
+              "base": 3,
+              "unit": "count",
+              "terms": [
+                {
+                  "role": "secondary",
+                  "stat": "cha",
+                  "source": "stat",
+                  "transform": {
+                    "cap": 4,
+                    "kind": "diminishing"
+                  },
+                  "clampAtZero": true
+                }
+              ]
+            },
+            "stack_trigger": "weapon_hit",
+            "stack_effect_type": "poison",
+            "stack_duration_ms": 25000,
+            "stack_interval_ms": 2000,
+            "dot_per_tick": 2,
+            "max_stacks": 4,
+            "pulse_damage": 0,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "target_fighter_id": "f-hero",
+            "target_entry_seq": 1,
+            "persistent_stance": true
+          },
+          "expires_at": null,
+          "next_due_at": null,
+          "interval_ms": null,
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "ally",
+          "target_creature_id": "creature",
+          "source_character_id": "ally",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "hero",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        }
+      ],
+      "effects_update": [],
+      "effects_delete": [],
+      "stance_fence": [],
+      "stance_updates": [],
+      "stance_clear_character_ids": [],
+      "fighters": [],
+      "departures": [],
+      "rewards": [],
+      "loot": [],
+      "durability": [],
+      "equipment_fence": [],
+      "events": [
+        {
+          "kind": "attack",
+          "actor": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "normal",
+          "amount": 5,
+          "meta": {
+            "basicAttack": true,
+            "isCrit": false,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 0
+        },
+        {
+          "kind": "creature_attack",
+          "actor": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "target": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "hitQuality": "glancing",
+          "amount": 1,
+          "meta": {
+            "isCrit": false,
+            "percentMitigated": 0,
+            "shieldBonusApplied": 0,
+            "critSoftened": 0,
+            "flatMitigated": 0,
+            "blocked": 0,
+            "absorbed": 0
+          },
+          "seq": 1
+        }
+      ],
+      "intent_ids": [
+        "i1"
+      ],
+      "participation": [
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "character_id": "ally",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": null
+        }
+      ],
+      "pending_event_ids": [],
+      "boss_cooldowns": []
+    }
+  },
+  {
+    "seed": "g-b",
+    "out": {
+      "tick": 6,
+      "characters": [
+        {
+          "id": "hero",
+          "hp": 391,
+          "cp": 150,
+          "mp": 0,
+          "died": false
+        }
+      ],
+      "creatures": [
+        {
+          "id": "spawn",
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "hp": 295,
+          "is_alive": true,
+          "damaged": true,
+          "hostile_attempt": true,
+          "pending_action": null,
+          "tank_fighter_id": "f-hero"
+        }
+      ],
+      "effects_insert": [
+        {
+          "kind": "stack_source",
+          "effect_type": "poison",
+          "ability_key": "envenom",
+          "target_character_id": "hero",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0.3192820323027551,
+          "config": {
+            "trigger": "on_hit",
+            "resolved_by": "combat-tick",
+            "consumes_all_cp": true,
+            "mutually_exclusive_with": [
+              "ignite"
+            ],
+            "status_key": "poison",
+            "status_label": "Poison",
+            "status_classification": "dot",
+            "status_trigger": "weapon_hit",
+            "status_chance_pct": null,
+            "status_enabled": true,
+            "effect_type": "poison",
+            "stack_noun": "poison",
+            "tick_rate_ms": 2000,
+            "dot_stat_mult": 1.2,
+            "dot_global_mult": 0.67,
+            "dot_stat": "dex",
+            "dot_duration_ms": 25000,
+            "max_stacks_calc": {
+              "base": 3,
+              "unit": "count",
+              "terms": [
+                {
+                  "role": "secondary",
+                  "stat": "cha",
+                  "source": "stat",
+                  "transform": {
+                    "cap": 4,
+                    "kind": "diminishing"
+                  },
+                  "clampAtZero": true
+                }
+              ]
+            },
+            "stack_trigger": "weapon_hit",
+            "stack_effect_type": "poison",
+            "stack_duration_ms": 25000,
+            "stack_interval_ms": 2000,
+            "dot_per_tick": 2,
+            "max_stacks": 4,
+            "pulse_damage": 0,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "target_fighter_id": "f-hero",
+            "target_entry_seq": 1,
+            "persistent_stance": true
+          },
+          "expires_at": null,
+          "next_due_at": null,
+          "interval_ms": null,
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "ally",
+          "target_creature_id": "creature",
+          "source_character_id": "ally",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "hero",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        }
+      ],
+      "effects_update": [],
+      "effects_delete": [],
+      "stance_fence": [],
+      "stance_updates": [],
+      "stance_clear_character_ids": [],
+      "fighters": [],
+      "departures": [],
+      "rewards": [],
+      "loot": [],
+      "durability": [],
+      "equipment_fence": [],
+      "events": [
+        {
+          "kind": "attack",
+          "actor": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "normal",
+          "amount": 5,
+          "meta": {
+            "basicAttack": true,
+            "isCrit": false,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 0
+        },
+        {
+          "kind": "creature_attack",
+          "actor": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "target": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "hitQuality": "normal",
+          "amount": 9,
+          "meta": {
+            "isCrit": false,
+            "percentMitigated": 0,
+            "shieldBonusApplied": 0,
+            "critSoftened": 0,
+            "flatMitigated": 0,
+            "blocked": 0,
+            "absorbed": 0
+          },
+          "seq": 1
+        }
+      ],
+      "intent_ids": [
+        "i1"
+      ],
+      "participation": [
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "character_id": "ally",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": null
+        }
+      ],
+      "pending_event_ids": [],
+      "boss_cooldowns": []
+    }
+  },
+  {
+    "seed": "g-c",
+    "out": {
+      "tick": 6,
+      "characters": [
+        {
+          "id": "hero",
+          "hp": 389,
+          "cp": 150,
+          "mp": 0,
+          "died": false
+        }
+      ],
+      "creatures": [
+        {
+          "id": "spawn",
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "hp": 293,
+          "is_alive": true,
+          "damaged": true,
+          "hostile_attempt": true,
+          "pending_action": null,
+          "tank_fighter_id": "f-hero"
+        }
+      ],
+      "effects_insert": [
+        {
+          "kind": "stack_source",
+          "effect_type": "poison",
+          "ability_key": "envenom",
+          "target_character_id": "hero",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0.3192820323027551,
+          "config": {
+            "trigger": "on_hit",
+            "resolved_by": "combat-tick",
+            "consumes_all_cp": true,
+            "mutually_exclusive_with": [
+              "ignite"
+            ],
+            "status_key": "poison",
+            "status_label": "Poison",
+            "status_classification": "dot",
+            "status_trigger": "weapon_hit",
+            "status_chance_pct": null,
+            "status_enabled": true,
+            "effect_type": "poison",
+            "stack_noun": "poison",
+            "tick_rate_ms": 2000,
+            "dot_stat_mult": 1.2,
+            "dot_global_mult": 0.67,
+            "dot_stat": "dex",
+            "dot_duration_ms": 25000,
+            "max_stacks_calc": {
+              "base": 3,
+              "unit": "count",
+              "terms": [
+                {
+                  "role": "secondary",
+                  "stat": "cha",
+                  "source": "stat",
+                  "transform": {
+                    "cap": 4,
+                    "kind": "diminishing"
+                  },
+                  "clampAtZero": true
+                }
+              ]
+            },
+            "stack_trigger": "weapon_hit",
+            "stack_effect_type": "poison",
+            "stack_duration_ms": 25000,
+            "stack_interval_ms": 2000,
+            "dot_per_tick": 2,
+            "max_stacks": 4,
+            "pulse_damage": 0,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "target_fighter_id": "f-hero",
+            "target_entry_seq": 1,
+            "persistent_stance": true
+          },
+          "expires_at": null,
+          "next_due_at": null,
+          "interval_ms": null,
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "ally",
+          "target_creature_id": "creature",
+          "source_character_id": "ally",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "hero",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        }
+      ],
+      "effects_update": [],
+      "effects_delete": [],
+      "stance_fence": [],
+      "stance_updates": [],
+      "stance_clear_character_ids": [],
+      "fighters": [],
+      "departures": [],
+      "rewards": [],
+      "loot": [],
+      "durability": [],
+      "equipment_fence": [],
+      "events": [
+        {
+          "kind": "attack",
+          "actor": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 7,
+          "meta": {
+            "basicAttack": true,
+            "isCrit": false,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 0
+        },
+        {
+          "kind": "creature_attack",
+          "actor": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "target": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "hitQuality": "strong",
+          "amount": 11,
+          "meta": {
+            "isCrit": true,
+            "percentMitigated": 0,
+            "shieldBonusApplied": 0,
+            "critSoftened": 0,
+            "flatMitigated": 0,
+            "blocked": 0,
+            "absorbed": 0
+          },
+          "seq": 1
+        }
+      ],
+      "intent_ids": [
+        "i1"
+      ],
+      "participation": [
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "character_id": "ally",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": null
+        }
+      ],
+      "pending_event_ids": [],
+      "boss_cooldowns": []
+    }
+  },
+  {
+    "seed": "g-d",
+    "out": {
+      "tick": 6,
+      "characters": [
+        {
+          "id": "hero",
+          "hp": 393,
+          "cp": 150,
+          "mp": 0,
+          "died": false
+        }
+      ],
+      "creatures": [
+        {
+          "id": "spawn",
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "hp": 293,
+          "is_alive": true,
+          "damaged": true,
+          "hostile_attempt": true,
+          "pending_action": null,
+          "tank_fighter_id": "f-hero"
+        }
+      ],
+      "effects_insert": [
+        {
+          "kind": "stack_source",
+          "effect_type": "poison",
+          "ability_key": "envenom",
+          "target_character_id": "hero",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0.3192820323027551,
+          "config": {
+            "trigger": "on_hit",
+            "resolved_by": "combat-tick",
+            "consumes_all_cp": true,
+            "mutually_exclusive_with": [
+              "ignite"
+            ],
+            "status_key": "poison",
+            "status_label": "Poison",
+            "status_classification": "dot",
+            "status_trigger": "weapon_hit",
+            "status_chance_pct": null,
+            "status_enabled": true,
+            "effect_type": "poison",
+            "stack_noun": "poison",
+            "tick_rate_ms": 2000,
+            "dot_stat_mult": 1.2,
+            "dot_global_mult": 0.67,
+            "dot_stat": "dex",
+            "dot_duration_ms": 25000,
+            "max_stacks_calc": {
+              "base": 3,
+              "unit": "count",
+              "terms": [
+                {
+                  "role": "secondary",
+                  "stat": "cha",
+                  "source": "stat",
+                  "transform": {
+                    "cap": 4,
+                    "kind": "diminishing"
+                  },
+                  "clampAtZero": true
+                }
+              ]
+            },
+            "stack_trigger": "weapon_hit",
+            "stack_effect_type": "poison",
+            "stack_duration_ms": 25000,
+            "stack_interval_ms": 2000,
+            "dot_per_tick": 2,
+            "max_stacks": 4,
+            "pulse_damage": 0,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "target_fighter_id": "f-hero",
+            "target_entry_seq": 1,
+            "persistent_stance": true
+          },
+          "expires_at": null,
+          "next_due_at": null,
+          "interval_ms": null,
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "ally",
+          "target_creature_id": "creature",
+          "source_character_id": "ally",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "hero",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        }
+      ],
+      "effects_update": [],
+      "effects_delete": [],
+      "stance_fence": [],
+      "stance_updates": [],
+      "stance_clear_character_ids": [],
+      "fighters": [],
+      "departures": [],
+      "rewards": [],
+      "loot": [],
+      "durability": [],
+      "equipment_fence": [],
+      "events": [
+        {
+          "kind": "attack",
+          "actor": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 7,
+          "meta": {
+            "basicAttack": true,
+            "isCrit": false,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 0
+        },
+        {
+          "kind": "creature_attack",
+          "actor": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "target": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "hitQuality": "normal",
+          "amount": 7,
+          "meta": {
+            "isCrit": false,
+            "percentMitigated": 0,
+            "shieldBonusApplied": 0,
+            "critSoftened": 0,
+            "flatMitigated": 0,
+            "blocked": 0,
+            "absorbed": 0
+          },
+          "seq": 1
+        }
+      ],
+      "intent_ids": [
+        "i1"
+      ],
+      "participation": [
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "character_id": "ally",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": null
+        }
+      ],
+      "pending_event_ids": [],
+      "boss_cooldowns": []
+    }
+  }
+]
