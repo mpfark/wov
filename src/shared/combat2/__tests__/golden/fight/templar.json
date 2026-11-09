@@ -1,0 +1,1034 @@
+[
+  {
+    "round": 0,
+    "events": [
+      {
+        "kind": "aura_started",
+        "abilityKey": "consecrate",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 3,
+        "meta": {
+          "durationMs": 8000,
+          "intervalMs": 2000
+        },
+        "seq": 0
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 6,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 1
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 14,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 2
+      }
+    ],
+    "effects_after": 3
+  },
+  {
+    "round": 1,
+    "events": [
+      {
+        "kind": "consecrate_heal",
+        "abilityKey": "consecrate",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 3,
+        "meta": {
+          "requested": 3,
+          "applied": 3,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "aura"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "consecrate_heal",
+        "abilityKey": "consecrate",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": -263,
+        "meta": {
+          "requested": 3,
+          "applied": -263,
+          "wasted": 266,
+          "cpRequested": 0,
+          "cpApplied": -52,
+          "cpWasted": 52,
+          "effectKind": "aura"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "consecrate_pulse",
+        "abilityKey": "consecrate",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "amount": 3,
+        "meta": {
+          "damageType": "holy",
+          "nodeCreatureId": "spawn",
+          "spawnSeq": 1
+        },
+        "seq": 2
+      },
+      {
+        "kind": "buff_applied",
+        "abilityKey": "divine_challenge",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 9,
+        "meta": {
+          "effectKind": "mitigation",
+          "mode": "flat",
+          "isTaunt": true
+        },
+        "seq": 3
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 8,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 4
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 8,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 5
+      }
+    ],
+    "effects_after": 1
+  },
+  {
+    "round": 2,
+    "events": [
+      {
+        "kind": "consecrate_heal",
+        "abilityKey": "consecrate",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 3,
+        "meta": {
+          "requested": 3,
+          "applied": 3,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "aura"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "consecrate_heal",
+        "abilityKey": "consecrate",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 3,
+        "meta": {
+          "requested": 3,
+          "applied": 3,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "aura"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "consecrate_pulse",
+        "abilityKey": "consecrate",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "amount": 3,
+        "meta": {
+          "damageType": "holy",
+          "nodeCreatureId": "spawn",
+          "spawnSeq": 1
+        },
+        "seq": 2
+      },
+      {
+        "kind": "passive_cp_regen",
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0
+        },
+        "seq": 3
+      },
+      {
+        "kind": "buff_applied",
+        "abilityKey": "holy_shield",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 12,
+        "meta": {
+          "effectKind": "reactive"
+        },
+        "seq": 4
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "miss",
+        "outcomeReason": "critical_miss",
+        "amount": 0,
+        "meta": {
+          "basicAttack": true
+        },
+        "seq": 5
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 0,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 9,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 6
+      }
+    ],
+    "effects_after": 1
+  },
+  {
+    "round": 3,
+    "events": [
+      {
+        "kind": "consecrate_heal",
+        "abilityKey": "consecrate",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 3,
+        "meta": {
+          "requested": 3,
+          "applied": 3,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "aura"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "consecrate_heal",
+        "abilityKey": "consecrate",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 3,
+        "meta": {
+          "requested": 3,
+          "applied": 3,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "aura"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "consecrate_pulse",
+        "abilityKey": "consecrate",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "amount": 3,
+        "meta": {
+          "damageType": "holy",
+          "nodeCreatureId": "spawn",
+          "spawnSeq": 1
+        },
+        "seq": 2
+      },
+      {
+        "kind": "attack",
+        "abilityKey": "judgment",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 21,
+        "meta": {
+          "isCrit": false,
+          "roll": 17,
+          "total": 33,
+          "damageType": "holy",
+          "weaponDie": null
+        },
+        "seq": 3
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 6,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 4
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "glancing",
+        "amount": 0,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 2,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 5
+      },
+      {
+        "kind": "effect_pulse",
+        "abilityKey": "holy_shield",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "amount": 12,
+        "meta": {
+          "effectKind": "reactive",
+          "reactive": true,
+          "damageType": "holy"
+        },
+        "seq": 6
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "round": 4,
+    "events": [
+      {
+        "kind": "consecrate_heal",
+        "abilityKey": "consecrate",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 3,
+        "meta": {
+          "requested": 3,
+          "applied": 3,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "aura"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "consecrate_heal",
+        "abilityKey": "consecrate",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 2,
+        "meta": {
+          "requested": 3,
+          "applied": 2,
+          "wasted": 1,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "aura"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "consecrate_pulse",
+        "abilityKey": "consecrate",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "amount": 3,
+        "meta": {
+          "damageType": "holy",
+          "nodeCreatureId": "spawn",
+          "spawnSeq": 1
+        },
+        "seq": 2
+      },
+      {
+        "kind": "passive_cp_regen",
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0
+        },
+        "seq": 3
+      },
+      {
+        "kind": "buff_applied",
+        "abilityKey": "shield_wall",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "effectKind": "block",
+          "blockChance": 0.3286121593216773
+        },
+        "seq": 4
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 7,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 5
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 11,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 9,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 6
+      },
+      {
+        "kind": "effect_pulse",
+        "abilityKey": "holy_shield",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "amount": 12,
+        "meta": {
+          "effectKind": "reactive",
+          "reactive": true,
+          "damageType": "holy"
+        },
+        "seq": 7
+      }
+    ],
+    "effects_after": 1
+  },
+  {
+    "round": 5,
+    "events": [
+      {
+        "kind": "effect_expired",
+        "abilityKey": "consecrate",
+        "meta": {
+          "effectKind": "aura",
+          "effectType": "consecrate"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "action_rejected",
+        "outcomeReason": "insufficient_cp",
+        "abilityKey": "consecrate",
+        "seq": 1
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 7,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 2
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "glancing",
+        "amount": 0,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 1,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 3
+      },
+      {
+        "kind": "effect_pulse",
+        "abilityKey": "holy_shield",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "amount": 12,
+        "meta": {
+          "effectKind": "reactive",
+          "reactive": true,
+          "damageType": "holy"
+        },
+        "seq": 4
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "round": 6,
+    "events": [
+      {
+        "kind": "passive_cp_regen",
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0
+        },
+        "seq": 0
+      },
+      {
+        "kind": "action_rejected",
+        "outcomeReason": "insufficient_cp",
+        "abilityKey": "divine_challenge",
+        "seq": 1
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 8,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 2
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "glancing",
+        "amount": 0,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 4,
+          "blocked": 0,
+          "blockAbilityKey": "shield_wall",
+          "absorbed": 0
+        },
+        "seq": 3
+      },
+      {
+        "kind": "effect_pulse",
+        "abilityKey": "holy_shield",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "amount": 12,
+        "meta": {
+          "effectKind": "reactive",
+          "reactive": true,
+          "damageType": "holy"
+        },
+        "seq": 4
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "round": 7,
+    "events": [
+      {
+        "kind": "action_rejected",
+        "outcomeReason": "insufficient_cp",
+        "abilityKey": "holy_shield",
+        "seq": 0
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "normal",
+        "amount": 7,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 1
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 0,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 8,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 2
+      },
+      {
+        "kind": "effect_pulse",
+        "abilityKey": "holy_shield",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "amount": 12,
+        "meta": {
+          "effectKind": "reactive",
+          "reactive": true,
+          "damageType": "holy"
+        },
+        "seq": 3
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "final": {
+      "fighters": [
+        [
+          "hero",
+          112,
+          13
+        ],
+        [
+          "ally",
+          412,
+          200
+        ]
+      ],
+      "creature_hp": 1858,
+      "effects": [
+        [
+          "autoattack",
+          "basic_attack",
+          1,
+          0
+        ],
+        [
+          "autoattack",
+          "basic_attack",
+          1,
+          0
+        ],
+        [
+          "mitigation",
+          "divine_challenge",
+          1,
+          9
+        ],
+        [
+          "reactive",
+          "holy_shield",
+          1,
+          12
+        ],
+        [
+          "block",
+          "shield_wall",
+          1,
+          5
+        ]
+      ]
+    }
+  }
+]

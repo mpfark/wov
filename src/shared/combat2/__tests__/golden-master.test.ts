@@ -10,6 +10,7 @@ import inventory from '@/shared/combat/inventory/active-abilities.json';
 import { buildAbilityCatalog, type AuthoredAbilityInventory } from '../catalog';
 import { resolveNodeTick } from '../resolver';
 import type { NodeSnapshot, SnapshotFighter } from '../types';
+import { applyTick } from './golden-apply';
 
 const authored = inventory as AuthoredAbilityInventory;
 const catalog = buildAbilityCatalog(authored.abilities, authored.statuses);
@@ -80,5 +81,32 @@ describe('golden master: combat2 resolver', () => {
     const runs = SEEDS.map(seed => ({ seed,
       out: resolveNodeTick(snapshot(seed, [fighter('hero', 'warrior'), fighter('ally', 'ranger')], []), deps) }));
     await expect(JSON.stringify(runs, null, 2)).toMatchFileSnapshot('golden/basic-attack.json');
+  });
+
+  const CLASSES = [...new Set(classAbilities.map(([k]) => k.split(':')[0]))];
+  it.each(CLASSES)('8-round fight rotating %s abilities', async cls => {
+    const rotation = classAbilities.filter(([k]) => k.startsWith(`${cls}:`)).map(([, s]) => s);
+    const intentFor = (round: number): NodeSnapshot['intents'] => {
+      const spec = rotation[round % rotation.length];
+      const ally = spec.targetType === 'ally';
+      return [{ id: `i${round}`, seq: round + 1, character_id: 'hero', intent_kind: 'ability',
+        ability_key: spec.abilityKey, stance_key: null,
+        target_creature_id: spec.targetType === 'enemy' ? 'creature' : null,
+        target_character_id: ally ? 'ally' : null, target_fighter_id: ally ? 'f-ally' : null,
+        target_entry_seq: ally ? 1 : null } as NodeSnapshot['intents'][number]];
+    };
+    const hero = fighter('hero', cls);
+    if (rotation.some(s => s.requiresShield)) hero.equipment = [SHIELD];
+    let state = snapshot(`fight-${cls}`, [hero, fighter('ally', 'warrior')], intentFor(0));
+    state.creatures[0].hp = state.creatures[0].max_hp = 2000;
+    const rounds = [];
+    for (let r = 0; r < 8; r++) {
+      const out = resolveNodeTick(state, deps);
+      rounds.push({ round: r, events: out.events, effects_after: out.effects_insert.length });
+      state = applyTick(state, out, intentFor(r + 1));
+    }
+    rounds.push({ final: { fighters: state.fighters.map(f => [f.character_id, f.hp, f.cp]),
+      creature_hp: state.creatures[0].hp, effects: state.effects.map(e => [e.kind, e.effect_type, e.stacks, e.magnitude]) } });
+    await expect(JSON.stringify(rounds, null, 2)).toMatchFileSnapshot(`golden/fight/${cls}.json`);
   });
 });

@@ -1,0 +1,896 @@
+[
+  {
+    "round": 0,
+    "events": [
+      {
+        "kind": "buff_applied",
+        "abilityKey": "divine_aegis",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 20,
+        "meta": {
+          "effectKind": "absorb",
+          "durationMs": 36000,
+          "stance": false
+        },
+        "seq": 0
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 7,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 1
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 4,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 2
+      }
+    ],
+    "effects_after": 3
+  },
+  {
+    "round": 1,
+    "events": [
+      {
+        "kind": "heal",
+        "abilityKey": "heal",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 29,
+        "meta": {
+          "requested": 29,
+          "applied": 29,
+          "wasted": 0,
+          "removedFromCaster": 0
+        },
+        "seq": 0
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 7,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 1
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 8,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 2
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "round": 2,
+    "events": [
+      {
+        "kind": "passive_cp_regen",
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0
+        },
+        "seq": 0
+      },
+      {
+        "kind": "aura_started",
+        "abilityKey": "purifying_light",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "effectKind": "party_regen",
+          "durationMs": 18000,
+          "intervalMs": 2000,
+          "cpPerTick": 0
+        },
+        "seq": 1
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 8,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 2
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 19,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 3
+      }
+    ],
+    "effects_after": 1
+  },
+  {
+    "round": 3,
+    "events": [
+      {
+        "kind": "party_restore",
+        "abilityKey": "purifying_light",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "purifying_light",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "attack",
+        "abilityKey": "smite",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "normal",
+        "amount": 17,
+        "meta": {
+          "isCrit": false,
+          "roll": 3,
+          "total": 19,
+          "damageType": "holy",
+          "weaponDie": null
+        },
+        "seq": 2
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 7,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 3
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 18,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 4
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "round": 4,
+    "events": [
+      {
+        "kind": "party_restore",
+        "abilityKey": "purifying_light",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "purifying_light",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "passive_cp_regen",
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0
+        },
+        "seq": 2
+      },
+      {
+        "kind": "hp_transfer",
+        "abilityKey": "transfer_health",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 16,
+        "meta": {
+          "reserveHp": 3,
+          "requested": 16,
+          "applied": 16,
+          "wasted": 0,
+          "removedFromCaster": 16
+        },
+        "seq": 3
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 8,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 4
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "miss",
+        "amount": 0,
+        "outcomeReason": "critical_miss",
+        "seq": 5
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "round": 5,
+    "events": [
+      {
+        "kind": "party_restore",
+        "abilityKey": "purifying_light",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "purifying_light",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "buff_applied",
+        "abilityKey": "divine_aegis",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 20,
+        "meta": {
+          "effectKind": "absorb",
+          "durationMs": 36000,
+          "stance": false
+        },
+        "seq": 2
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 7,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 3
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 11,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 4
+      }
+    ],
+    "effects_after": 1
+  },
+  {
+    "round": 6,
+    "events": [
+      {
+        "kind": "party_restore",
+        "abilityKey": "purifying_light",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "purifying_light",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "passive_cp_regen",
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0
+        },
+        "seq": 2
+      },
+      {
+        "kind": "action_rejected",
+        "outcomeReason": "insufficient_cp",
+        "abilityKey": "heal",
+        "seq": 3
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "normal",
+        "amount": 5,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 4
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "glancing",
+        "amount": 1,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 5
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "round": 7,
+    "events": [
+      {
+        "kind": "party_restore",
+        "abilityKey": "purifying_light",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "purifying_light",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "action_rejected",
+        "outcomeReason": "insufficient_cp",
+        "abilityKey": "purifying_light",
+        "seq": 2
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "normal",
+        "amount": 5,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 3
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 10,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 4
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "final": {
+      "fighters": [
+        [
+          "hero",
+          367,
+          5
+        ],
+        [
+          "ally",
+          441,
+          200
+        ]
+      ],
+      "creature_hp": 1929,
+      "effects": [
+        [
+          "autoattack",
+          "basic_attack",
+          1,
+          0
+        ],
+        [
+          "autoattack",
+          "basic_attack",
+          1,
+          0
+        ],
+        [
+          "party_regen",
+          "purifying_light",
+          1,
+          5
+        ],
+        [
+          "absorb",
+          "divine_aegis",
+          1,
+          20
+        ]
+      ]
+    }
+  }
+]

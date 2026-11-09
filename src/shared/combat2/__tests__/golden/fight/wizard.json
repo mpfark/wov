@@ -1,0 +1,796 @@
+[
+  {
+    "round": 0,
+    "events": [
+      {
+        "kind": "buff_applied",
+        "abilityKey": "arcane_surge",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 1.1400000000000001,
+        "meta": {
+          "effectKind": "offense",
+          "durationMs": null,
+          "stance": true
+        },
+        "seq": 0
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 6,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 1
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 10,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 2
+      }
+    ],
+    "effects_after": 3
+  },
+  {
+    "round": 1,
+    "events": [
+      {
+        "kind": "attack",
+        "abilityKey": "conflagrate",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 25,
+        "meta": {
+          "isCrit": false,
+          "roll": 11,
+          "total": 26,
+          "damageType": "fire",
+          "weaponDie": null,
+          "offenseMultiplier": 1.1400000000000001,
+          "stacksConsumed": 0,
+          "stackNoun": "burn"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 8,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 1
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 18,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 2
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "round": 2,
+    "events": [
+      {
+        "kind": "passive_cp_regen",
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0
+        },
+        "seq": 0
+      },
+      {
+        "kind": "attack",
+        "abilityKey": "fireball",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 27,
+        "meta": {
+          "isCrit": false,
+          "roll": 14,
+          "total": 29,
+          "damageType": "fire",
+          "weaponDie": null,
+          "offenseMultiplier": 1.1400000000000001
+        },
+        "seq": 1
+      },
+      {
+        "kind": "status_missed",
+        "abilityKey": "fireball",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "amount": 0,
+        "meta": {
+          "status": "scorched",
+          "chancePct": 25
+        },
+        "seq": 2
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 6,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 3
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 16,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 4
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "round": 3,
+    "events": [
+      {
+        "kind": "buff_applied",
+        "abilityKey": "force_shield",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 14,
+        "meta": {
+          "effectKind": "absorb",
+          "durationMs": 12000,
+          "stance": true
+        },
+        "seq": 0
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 6,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 1
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "glancing",
+        "amount": 3,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 2
+      }
+    ],
+    "effects_after": 1
+  },
+  {
+    "round": 4,
+    "events": [
+      {
+        "kind": "passive_cp_regen",
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0
+        },
+        "seq": 0
+      },
+      {
+        "kind": "attack",
+        "abilityKey": "frostbolt",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 27,
+        "meta": {
+          "isCrit": false,
+          "roll": 9,
+          "total": 24,
+          "damageType": "frost",
+          "weaponDie": null,
+          "offenseMultiplier": 1.1400000000000001
+        },
+        "seq": 1
+      },
+      {
+        "kind": "status_applied",
+        "abilityKey": "frostbolt",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "amount": 1,
+        "meta": {
+          "status": "chilled",
+          "stacks": 1,
+          "maxStacks": 1,
+          "durationMs": 6000,
+          "chancePct": 100
+        },
+        "seq": 2
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 7,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 3
+      },
+      {
+        "kind": "absorb",
+        "abilityKey": "force_shield",
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 9,
+        "meta": {
+          "remaining": 5,
+          "depleted": false
+        },
+        "seq": 4
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 0,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 9
+        },
+        "seq": 5
+      }
+    ],
+    "effects_after": 1
+  },
+  {
+    "round": 5,
+    "events": [
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 6,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 0
+      },
+      {
+        "kind": "absorb",
+        "abilityKey": "force_shield",
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "remaining": 0,
+          "depleted": true
+        },
+        "seq": 1
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "strong",
+        "amount": 6,
+        "meta": {
+          "isCrit": true,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 5
+        },
+        "seq": 2
+      }
+    ],
+    "effects_after": 1
+  },
+  {
+    "round": 6,
+    "events": [
+      {
+        "kind": "passive_cp_regen",
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0
+        },
+        "seq": 0
+      },
+      {
+        "kind": "action_rejected",
+        "outcomeReason": "insufficient_cp",
+        "abilityKey": "ignite",
+        "seq": 1
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "normal",
+        "amount": 6,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 2
+      },
+      {
+        "kind": "orb_attack",
+        "abilityKey": "ignite",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "miss",
+        "amount": 0,
+        "seq": 3
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "miss",
+        "amount": 0,
+        "outcomeReason": "critical_miss",
+        "seq": 4
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "round": 7,
+    "events": [
+      {
+        "kind": "buff_applied",
+        "abilityKey": "arcane_surge",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 1.1400000000000001,
+        "meta": {
+          "effectKind": "offense",
+          "durationMs": null,
+          "stance": true
+        },
+        "seq": 0
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 7,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 1
+      },
+      {
+        "kind": "orb_attack",
+        "abilityKey": "ignite",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "normal",
+        "amount": 6,
+        "meta": {
+          "damageType": "fire"
+        },
+        "seq": 2
+      },
+      {
+        "kind": "stack_applied",
+        "abilityKey": "ignite",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "amount": 1,
+        "meta": {
+          "stacks": 1,
+          "maxStacks": 5,
+          "stackNoun": "burn",
+          "refreshed": false
+        },
+        "seq": 3
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 20,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 4
+      }
+    ],
+    "effects_after": 2
+  },
+  {
+    "final": {
+      "fighters": [
+        [
+          "hero",
+          327,
+          20
+        ],
+        [
+          "ally",
+          400,
+          200
+        ]
+      ],
+      "creature_hp": 1863,
+      "effects": [
+        [
+          "autoattack",
+          "basic_attack",
+          1,
+          0
+        ],
+        [
+          "autoattack",
+          "basic_attack",
+          1,
+          0
+        ],
+        [
+          "amplification",
+          "chilled",
+          1,
+          0
+        ],
+        [
+          "stack_source",
+          "ignite",
+          1,
+          0.33
+        ],
+        [
+          "offense",
+          "arcane_surge",
+          1,
+          1.1400000000000001
+        ],
+        [
+          "stack",
+          "ignite",
+          1,
+          1
+        ]
+      ]
+    }
+  }
+]
