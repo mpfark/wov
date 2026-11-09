@@ -66,7 +66,7 @@ describe('golden master: combat2 resolver', () => {
       const ally = spec.targetType === 'ally';
       const intent = { id: 'i1', seq: 1, character_id: 'hero', intent_kind: 'ability',
         ability_key: spec.abilityKey, stance_key: null,
-        target_creature_id: spec.targetType === 'enemy' ? 'spawn' : null,
+        target_creature_id: spec.targetType === 'enemy' ? 'creature' : null,
         target_character_id: ally ? 'ally' : null, target_fighter_id: ally ? 'f-ally' : null,
         target_entry_seq: ally ? 1 : null } as NodeSnapshot['intents'][number];
       const hero = fighter('hero', cls);

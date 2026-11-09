@@ -7,7 +7,7 @@
         {
           "id": "hero",
           "hp": 399,
-          "cp": 200,
+          "cp": 175,
           "mp": 0,
           "died": false
         }
@@ -26,6 +26,30 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "block",
+          "effect_type": "shield_wall",
+          "ability_key": "shield_wall",
+          "target_character_id": "hero",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 5,
+          "config": {
+            "resolved_by": "combat-tick",
+            "requires_shield": true,
+            "block_chance_cap": 0.95,
+            "amount_stat": "con",
+            "chance_stat": "wis",
+            "block_chance": 0.3286121593216773,
+            "target_fighter_id": "f-hero",
+            "target_entry_seq": 1,
+            "persistent_stance": true
+          },
+          "expires_at": null,
+          "next_due_at": null,
+          "interval_ms": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -67,12 +91,48 @@
       "rewards": [],
       "loot": [],
       "durability": [],
-      "equipment_fence": [],
+      "equipment_fence": [
+        {
+          "slot": "off_hand",
+          "item_id": "shield",
+          "inventory_id": "inv-shield",
+          "character_id": "hero",
+          "durability": 100,
+          "max_durability": 100,
+          "applied_gems": {},
+          "stat_override": null,
+          "base_stats": {},
+          "crafted_level": null,
+          "item_present": true,
+          "item_type": "equipment",
+          "weapon_tag": "shield",
+          "hands": 1,
+          "item_level": 20,
+          "rarity": "common",
+          "procs": [],
+          "fighter_id": "f-hero",
+          "entry_seq": 1
+        }
+      ],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "requires_shield",
+          "kind": "buff_applied",
           "abilityKey": "shield_wall",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "amount": 5,
+          "meta": {
+            "effectKind": "block",
+            "blockChance": 0.3286121593216773
+          },
           "seq": 0
         },
         {
@@ -133,7 +193,7 @@
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -148,7 +208,7 @@
         {
           "id": "hero",
           "hp": 391,
-          "cp": 200,
+          "cp": 175,
           "mp": 0,
           "died": false
         }
@@ -167,6 +227,30 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "block",
+          "effect_type": "shield_wall",
+          "ability_key": "shield_wall",
+          "target_character_id": "hero",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 5,
+          "config": {
+            "resolved_by": "combat-tick",
+            "requires_shield": true,
+            "block_chance_cap": 0.95,
+            "amount_stat": "con",
+            "chance_stat": "wis",
+            "block_chance": 0.3286121593216773,
+            "target_fighter_id": "f-hero",
+            "target_entry_seq": 1,
+            "persistent_stance": true
+          },
+          "expires_at": null,
+          "next_due_at": null,
+          "interval_ms": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -208,12 +292,48 @@
       "rewards": [],
       "loot": [],
       "durability": [],
-      "equipment_fence": [],
+      "equipment_fence": [
+        {
+          "slot": "off_hand",
+          "item_id": "shield",
+          "inventory_id": "inv-shield",
+          "character_id": "hero",
+          "durability": 100,
+          "max_durability": 100,
+          "applied_gems": {},
+          "stat_override": null,
+          "base_stats": {},
+          "crafted_level": null,
+          "item_present": true,
+          "item_type": "equipment",
+          "weapon_tag": "shield",
+          "hands": 1,
+          "item_level": 20,
+          "rarity": "common",
+          "procs": [],
+          "fighter_id": "f-hero",
+          "entry_seq": 1
+        }
+      ],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "requires_shield",
+          "kind": "buff_applied",
           "abilityKey": "shield_wall",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "amount": 5,
+          "meta": {
+            "effectKind": "block",
+            "blockChance": 0.3286121593216773
+          },
           "seq": 0
         },
         {
@@ -274,7 +394,7 @@
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -289,7 +409,7 @@
         {
           "id": "hero",
           "hp": 389,
-          "cp": 200,
+          "cp": 175,
           "mp": 0,
           "died": false
         }
@@ -308,6 +428,30 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "block",
+          "effect_type": "shield_wall",
+          "ability_key": "shield_wall",
+          "target_character_id": "hero",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 5,
+          "config": {
+            "resolved_by": "combat-tick",
+            "requires_shield": true,
+            "block_chance_cap": 0.95,
+            "amount_stat": "con",
+            "chance_stat": "wis",
+            "block_chance": 0.3286121593216773,
+            "target_fighter_id": "f-hero",
+            "target_entry_seq": 1,
+            "persistent_stance": true
+          },
+          "expires_at": null,
+          "next_due_at": null,
+          "interval_ms": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -349,12 +493,48 @@
       "rewards": [],
       "loot": [],
       "durability": [],
-      "equipment_fence": [],
+      "equipment_fence": [
+        {
+          "slot": "off_hand",
+          "item_id": "shield",
+          "inventory_id": "inv-shield",
+          "character_id": "hero",
+          "durability": 100,
+          "max_durability": 100,
+          "applied_gems": {},
+          "stat_override": null,
+          "base_stats": {},
+          "crafted_level": null,
+          "item_present": true,
+          "item_type": "equipment",
+          "weapon_tag": "shield",
+          "hands": 1,
+          "item_level": 20,
+          "rarity": "common",
+          "procs": [],
+          "fighter_id": "f-hero",
+          "entry_seq": 1
+        }
+      ],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "requires_shield",
+          "kind": "buff_applied",
           "abilityKey": "shield_wall",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "amount": 5,
+          "meta": {
+            "effectKind": "block",
+            "blockChance": 0.3286121593216773
+          },
           "seq": 0
         },
         {
@@ -415,7 +595,7 @@
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -430,7 +610,7 @@
         {
           "id": "hero",
           "hp": 393,
-          "cp": 200,
+          "cp": 175,
           "mp": 0,
           "died": false
         }
@@ -449,6 +629,30 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "block",
+          "effect_type": "shield_wall",
+          "ability_key": "shield_wall",
+          "target_character_id": "hero",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 5,
+          "config": {
+            "resolved_by": "combat-tick",
+            "requires_shield": true,
+            "block_chance_cap": 0.95,
+            "amount_stat": "con",
+            "chance_stat": "wis",
+            "block_chance": 0.3286121593216773,
+            "target_fighter_id": "f-hero",
+            "target_entry_seq": 1,
+            "persistent_stance": true
+          },
+          "expires_at": null,
+          "next_due_at": null,
+          "interval_ms": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -490,12 +694,48 @@
       "rewards": [],
       "loot": [],
       "durability": [],
-      "equipment_fence": [],
+      "equipment_fence": [
+        {
+          "slot": "off_hand",
+          "item_id": "shield",
+          "inventory_id": "inv-shield",
+          "character_id": "hero",
+          "durability": 100,
+          "max_durability": 100,
+          "applied_gems": {},
+          "stat_override": null,
+          "base_stats": {},
+          "crafted_level": null,
+          "item_present": true,
+          "item_type": "equipment",
+          "weapon_tag": "shield",
+          "hands": 1,
+          "item_level": 20,
+          "rarity": "common",
+          "procs": [],
+          "fighter_id": "f-hero",
+          "entry_seq": 1
+        }
+      ],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "requires_shield",
+          "kind": "buff_applied",
           "abilityKey": "shield_wall",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "amount": 5,
+          "meta": {
+            "effectKind": "block",
+            "blockChance": 0.3286121593216773
+          },
           "seq": 0
         },
         {
@@ -556,7 +796,7 @@
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
