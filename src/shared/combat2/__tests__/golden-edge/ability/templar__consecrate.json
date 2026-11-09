@@ -1,0 +1,710 @@
+[
+  {
+    "seed": "g-a",
+    "out": {
+      "tick": 6,
+      "characters": [
+        {
+          "id": "hero",
+          "hp": 399,
+          "cp": 160,
+          "mp": 0,
+          "died": false
+        }
+      ],
+      "creatures": [
+        {
+          "id": "spawn",
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "hp": 295,
+          "is_alive": true,
+          "damaged": true,
+          "hostile_attempt": true,
+          "pending_action": null,
+          "tank_fighter_id": "f-hero"
+        }
+      ],
+      "effects_insert": [
+        {
+          "kind": "aura",
+          "effect_type": "consecrate",
+          "ability_key": "consecrate",
+          "target_character_id": "hero",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 3,
+          "config": {
+            "resolved_by": "combat-tick",
+            "heals_allies": true,
+            "damages_enemies": true,
+            "magnitude_reduction": 0.35,
+            "magnitude_stat": "wis",
+            "activated_at_tick": 6,
+            "expires_after_tick": 10,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "damage_type": "holy"
+          },
+          "expires_at": "2026-09-09T12:00:10.000Z",
+          "next_due_at": "2026-09-09T12:00:04.000Z",
+          "interval_ms": 2000,
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "ally",
+          "target_creature_id": "creature",
+          "source_character_id": "ally",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "hero",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        }
+      ],
+      "effects_update": [],
+      "effects_delete": [],
+      "stance_fence": [],
+      "stance_updates": [],
+      "stance_clear_character_ids": [],
+      "fighters": [],
+      "departures": [],
+      "rewards": [],
+      "loot": [],
+      "durability": [],
+      "equipment_fence": [],
+      "events": [
+        {
+          "kind": "aura_started",
+          "abilityKey": "consecrate",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "amount": 3,
+          "meta": {
+            "durationMs": 8000,
+            "intervalMs": 2000
+          },
+          "seq": 0
+        },
+        {
+          "kind": "attack",
+          "actor": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "normal",
+          "amount": 5,
+          "meta": {
+            "basicAttack": true,
+            "isCrit": false,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 1
+        },
+        {
+          "kind": "creature_attack",
+          "actor": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "target": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "hitQuality": "glancing",
+          "amount": 1,
+          "meta": {
+            "isCrit": false,
+            "percentMitigated": 0,
+            "shieldBonusApplied": 0,
+            "critSoftened": 0,
+            "flatMitigated": 0,
+            "blocked": 0,
+            "absorbed": 0
+          },
+          "seq": 2
+        }
+      ],
+      "intent_ids": [
+        "i1"
+      ],
+      "participation": [
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "character_id": "ally",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        }
+      ],
+      "pending_event_ids": [],
+      "boss_cooldowns": []
+    }
+  },
+  {
+    "seed": "g-b",
+    "out": {
+      "tick": 6,
+      "characters": [
+        {
+          "id": "hero",
+          "hp": 391,
+          "cp": 160,
+          "mp": 0,
+          "died": false
+        }
+      ],
+      "creatures": [
+        {
+          "id": "spawn",
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "hp": 295,
+          "is_alive": true,
+          "damaged": true,
+          "hostile_attempt": true,
+          "pending_action": null,
+          "tank_fighter_id": "f-hero"
+        }
+      ],
+      "effects_insert": [
+        {
+          "kind": "aura",
+          "effect_type": "consecrate",
+          "ability_key": "consecrate",
+          "target_character_id": "hero",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 3,
+          "config": {
+            "resolved_by": "combat-tick",
+            "heals_allies": true,
+            "damages_enemies": true,
+            "magnitude_reduction": 0.35,
+            "magnitude_stat": "wis",
+            "activated_at_tick": 6,
+            "expires_after_tick": 10,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "damage_type": "holy"
+          },
+          "expires_at": "2026-09-09T12:00:10.000Z",
+          "next_due_at": "2026-09-09T12:00:04.000Z",
+          "interval_ms": 2000,
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "ally",
+          "target_creature_id": "creature",
+          "source_character_id": "ally",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "hero",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        }
+      ],
+      "effects_update": [],
+      "effects_delete": [],
+      "stance_fence": [],
+      "stance_updates": [],
+      "stance_clear_character_ids": [],
+      "fighters": [],
+      "departures": [],
+      "rewards": [],
+      "loot": [],
+      "durability": [],
+      "equipment_fence": [],
+      "events": [
+        {
+          "kind": "aura_started",
+          "abilityKey": "consecrate",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "amount": 3,
+          "meta": {
+            "durationMs": 8000,
+            "intervalMs": 2000
+          },
+          "seq": 0
+        },
+        {
+          "kind": "attack",
+          "actor": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "normal",
+          "amount": 5,
+          "meta": {
+            "basicAttack": true,
+            "isCrit": false,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 1
+        },
+        {
+          "kind": "creature_attack",
+          "actor": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "target": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "hitQuality": "normal",
+          "amount": 9,
+          "meta": {
+            "isCrit": false,
+            "percentMitigated": 0,
+            "shieldBonusApplied": 0,
+            "critSoftened": 0,
+            "flatMitigated": 0,
+            "blocked": 0,
+            "absorbed": 0
+          },
+          "seq": 2
+        }
+      ],
+      "intent_ids": [
+        "i1"
+      ],
+      "participation": [
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "character_id": "ally",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        }
+      ],
+      "pending_event_ids": [],
+      "boss_cooldowns": []
+    }
+  },
+  {
+    "seed": "g-c",
+    "out": {
+      "tick": 6,
+      "characters": [
+        {
+          "id": "hero",
+          "hp": 389,
+          "cp": 160,
+          "mp": 0,
+          "died": false
+        }
+      ],
+      "creatures": [
+        {
+          "id": "spawn",
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "hp": 293,
+          "is_alive": true,
+          "damaged": true,
+          "hostile_attempt": true,
+          "pending_action": null,
+          "tank_fighter_id": "f-hero"
+        }
+      ],
+      "effects_insert": [
+        {
+          "kind": "aura",
+          "effect_type": "consecrate",
+          "ability_key": "consecrate",
+          "target_character_id": "hero",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 3,
+          "config": {
+            "resolved_by": "combat-tick",
+            "heals_allies": true,
+            "damages_enemies": true,
+            "magnitude_reduction": 0.35,
+            "magnitude_stat": "wis",
+            "activated_at_tick": 6,
+            "expires_after_tick": 10,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "damage_type": "holy"
+          },
+          "expires_at": "2026-09-09T12:00:10.000Z",
+          "next_due_at": "2026-09-09T12:00:04.000Z",
+          "interval_ms": 2000,
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "ally",
+          "target_creature_id": "creature",
+          "source_character_id": "ally",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "hero",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        }
+      ],
+      "effects_update": [],
+      "effects_delete": [],
+      "stance_fence": [],
+      "stance_updates": [],
+      "stance_clear_character_ids": [],
+      "fighters": [],
+      "departures": [],
+      "rewards": [],
+      "loot": [],
+      "durability": [],
+      "equipment_fence": [],
+      "events": [
+        {
+          "kind": "aura_started",
+          "abilityKey": "consecrate",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "amount": 3,
+          "meta": {
+            "durationMs": 8000,
+            "intervalMs": 2000
+          },
+          "seq": 0
+        },
+        {
+          "kind": "attack",
+          "actor": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 7,
+          "meta": {
+            "basicAttack": true,
+            "isCrit": false,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 1
+        },
+        {
+          "kind": "creature_attack",
+          "actor": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "target": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "hitQuality": "strong",
+          "amount": 11,
+          "meta": {
+            "isCrit": true,
+            "percentMitigated": 0,
+            "shieldBonusApplied": 0,
+            "critSoftened": 0,
+            "flatMitigated": 0,
+            "blocked": 0,
+            "absorbed": 0
+          },
+          "seq": 2
+        }
+      ],
+      "intent_ids": [
+        "i1"
+      ],
+      "participation": [
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "character_id": "ally",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        }
+      ],
+      "pending_event_ids": [],
+      "boss_cooldowns": []
+    }
+  },
+  {
+    "seed": "g-d",
+    "out": {
+      "tick": 6,
+      "characters": [
+        {
+          "id": "hero",
+          "hp": 393,
+          "cp": 160,
+          "mp": 0,
+          "died": false
+        }
+      ],
+      "creatures": [
+        {
+          "id": "spawn",
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "hp": 293,
+          "is_alive": true,
+          "damaged": true,
+          "hostile_attempt": true,
+          "pending_action": null,
+          "tank_fighter_id": "f-hero"
+        }
+      ],
+      "effects_insert": [
+        {
+          "kind": "aura",
+          "effect_type": "consecrate",
+          "ability_key": "consecrate",
+          "target_character_id": "hero",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 3,
+          "config": {
+            "resolved_by": "combat-tick",
+            "heals_allies": true,
+            "damages_enemies": true,
+            "magnitude_reduction": 0.35,
+            "magnitude_stat": "wis",
+            "activated_at_tick": 6,
+            "expires_after_tick": 10,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "damage_type": "holy"
+          },
+          "expires_at": "2026-09-09T12:00:10.000Z",
+          "next_due_at": "2026-09-09T12:00:04.000Z",
+          "interval_ms": 2000,
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "ally",
+          "target_creature_id": "creature",
+          "source_character_id": "ally",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        },
+        {
+          "kind": "autoattack",
+          "effect_type": "basic_attack",
+          "ability_key": null,
+          "target_character_id": "hero",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1
+          },
+          "is_reservation": false
+        }
+      ],
+      "effects_update": [],
+      "effects_delete": [],
+      "stance_fence": [],
+      "stance_updates": [],
+      "stance_clear_character_ids": [],
+      "fighters": [],
+      "departures": [],
+      "rewards": [],
+      "loot": [],
+      "durability": [],
+      "equipment_fence": [],
+      "events": [
+        {
+          "kind": "aura_started",
+          "abilityKey": "consecrate",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "amount": 3,
+          "meta": {
+            "durationMs": 8000,
+            "intervalMs": 2000
+          },
+          "seq": 0
+        },
+        {
+          "kind": "attack",
+          "actor": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 7,
+          "meta": {
+            "basicAttack": true,
+            "isCrit": false,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 1
+        },
+        {
+          "kind": "creature_attack",
+          "actor": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "target": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "hitQuality": "normal",
+          "amount": 7,
+          "meta": {
+            "isCrit": false,
+            "percentMitigated": 0,
+            "shieldBonusApplied": 0,
+            "critSoftened": 0,
+            "flatMitigated": 0,
+            "blocked": 0,
+            "absorbed": 0
+          },
+          "seq": 2
+        }
+      ],
+      "intent_ids": [
+        "i1"
+      ],
+      "participation": [
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
+          "character_id": "ally",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        }
+      ],
+      "pending_event_ids": [],
+      "boss_cooldowns": []
+    }
+  }
+]
