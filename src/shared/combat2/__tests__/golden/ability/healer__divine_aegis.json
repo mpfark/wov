@@ -7,7 +7,7 @@
         {
           "id": "hero",
           "hp": 399,
-          "cp": 200,
+          "cp": 140,
           "mp": 0,
           "died": false
         }
@@ -26,6 +26,31 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "absorb",
+          "effect_type": "divine_aegis",
+          "ability_key": "divine_aegis",
+          "target_character_id": "ally",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 20,
+          "config": {
+            "resolved_by": "client-cast",
+            "absorb_shield": true,
+            "stat": "wis",
+            "duration_stat": "con",
+            "activated_at_tick": 6,
+            "expires_after_tick": 24,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "target_fighter_id": "f-ally",
+            "target_entry_seq": 1
+          },
+          "expires_at": "2026-09-09T12:00:38.000Z",
+          "next_due_at": "2026-09-09T12:00:04.000Z",
+          "interval_ms": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -70,9 +95,24 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "invalid_ally_target",
+          "kind": "buff_applied",
           "abilityKey": "divine_aegis",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "amount": 20,
+          "meta": {
+            "effectKind": "absorb",
+            "durationMs": 36000,
+            "stance": false
+          },
           "seq": 0
         },
         {
@@ -133,7 +173,7 @@
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -148,7 +188,7 @@
         {
           "id": "hero",
           "hp": 391,
-          "cp": 200,
+          "cp": 140,
           "mp": 0,
           "died": false
         }
@@ -167,6 +207,31 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "absorb",
+          "effect_type": "divine_aegis",
+          "ability_key": "divine_aegis",
+          "target_character_id": "ally",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 20,
+          "config": {
+            "resolved_by": "client-cast",
+            "absorb_shield": true,
+            "stat": "wis",
+            "duration_stat": "con",
+            "activated_at_tick": 6,
+            "expires_after_tick": 24,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "target_fighter_id": "f-ally",
+            "target_entry_seq": 1
+          },
+          "expires_at": "2026-09-09T12:00:38.000Z",
+          "next_due_at": "2026-09-09T12:00:04.000Z",
+          "interval_ms": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -211,9 +276,24 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "invalid_ally_target",
+          "kind": "buff_applied",
           "abilityKey": "divine_aegis",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "amount": 20,
+          "meta": {
+            "effectKind": "absorb",
+            "durationMs": 36000,
+            "stance": false
+          },
           "seq": 0
         },
         {
@@ -274,7 +354,7 @@
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -289,7 +369,7 @@
         {
           "id": "hero",
           "hp": 389,
-          "cp": 200,
+          "cp": 140,
           "mp": 0,
           "died": false
         }
@@ -308,6 +388,31 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "absorb",
+          "effect_type": "divine_aegis",
+          "ability_key": "divine_aegis",
+          "target_character_id": "ally",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 20,
+          "config": {
+            "resolved_by": "client-cast",
+            "absorb_shield": true,
+            "stat": "wis",
+            "duration_stat": "con",
+            "activated_at_tick": 6,
+            "expires_after_tick": 24,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "target_fighter_id": "f-ally",
+            "target_entry_seq": 1
+          },
+          "expires_at": "2026-09-09T12:00:38.000Z",
+          "next_due_at": "2026-09-09T12:00:04.000Z",
+          "interval_ms": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -352,9 +457,24 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "invalid_ally_target",
+          "kind": "buff_applied",
           "abilityKey": "divine_aegis",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "amount": 20,
+          "meta": {
+            "effectKind": "absorb",
+            "durationMs": 36000,
+            "stance": false
+          },
           "seq": 0
         },
         {
@@ -415,7 +535,7 @@
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -430,7 +550,7 @@
         {
           "id": "hero",
           "hp": 393,
-          "cp": 200,
+          "cp": 140,
           "mp": 0,
           "died": false
         }
@@ -449,6 +569,31 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "absorb",
+          "effect_type": "divine_aegis",
+          "ability_key": "divine_aegis",
+          "target_character_id": "ally",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 20,
+          "config": {
+            "resolved_by": "client-cast",
+            "absorb_shield": true,
+            "stat": "wis",
+            "duration_stat": "con",
+            "activated_at_tick": 6,
+            "expires_after_tick": 24,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "target_fighter_id": "f-ally",
+            "target_entry_seq": 1
+          },
+          "expires_at": "2026-09-09T12:00:38.000Z",
+          "next_due_at": "2026-09-09T12:00:04.000Z",
+          "interval_ms": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -493,9 +638,24 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "invalid_ally_target",
+          "kind": "buff_applied",
           "abilityKey": "divine_aegis",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "amount": 20,
+          "meta": {
+            "effectKind": "absorb",
+            "durationMs": 36000,
+            "stance": false
+          },
           "seq": 0
         },
         {
@@ -556,7 +716,7 @@
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],

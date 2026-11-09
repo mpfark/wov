@@ -7,7 +7,7 @@
         {
           "id": "hero",
           "hp": 399,
-          "cp": 200,
+          "cp": 190,
           "mp": 0,
           "died": false
         }
@@ -17,7 +17,7 @@
           "id": "spawn",
           "creature_id": "creature",
           "spawn_seq": 1,
-          "hp": 295,
+          "hp": 274,
           "is_alive": true,
           "damaged": true,
           "hostile_attempt": true,
@@ -70,9 +70,27 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "attack",
           "abilityKey": "cutting_words",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 21,
+          "meta": {
+            "isCrit": false,
+            "roll": 5,
+            "total": 21,
+            "damageType": "psychic",
+            "weaponDie": null
+          },
           "seq": 0
         },
         {
@@ -130,10 +148,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -148,7 +174,7 @@
         {
           "id": "hero",
           "hp": 391,
-          "cp": 200,
+          "cp": 190,
           "mp": 0,
           "died": false
         }
@@ -158,7 +184,7 @@
           "id": "spawn",
           "creature_id": "creature",
           "spawn_seq": 1,
-          "hp": 295,
+          "hp": 274,
           "is_alive": true,
           "damaged": true,
           "hostile_attempt": true,
@@ -211,9 +237,27 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "attack",
           "abilityKey": "cutting_words",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 21,
+          "meta": {
+            "isCrit": false,
+            "roll": 18,
+            "total": 34,
+            "damageType": "psychic",
+            "weaponDie": null
+          },
           "seq": 0
         },
         {
@@ -271,10 +315,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -289,7 +341,7 @@
         {
           "id": "hero",
           "hp": 389,
-          "cp": 200,
+          "cp": 190,
           "mp": 0,
           "died": false
         }
@@ -299,7 +351,7 @@
           "id": "spawn",
           "creature_id": "creature",
           "spawn_seq": 1,
-          "hp": 293,
+          "hp": 272,
           "is_alive": true,
           "damaged": true,
           "hostile_attempt": true,
@@ -352,9 +404,27 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "attack",
           "abilityKey": "cutting_words",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 21,
+          "meta": {
+            "isCrit": false,
+            "roll": 8,
+            "total": 24,
+            "damageType": "psychic",
+            "weaponDie": null
+          },
           "seq": 0
         },
         {
@@ -412,10 +482,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -430,7 +508,7 @@
         {
           "id": "hero",
           "hp": 393,
-          "cp": 200,
+          "cp": 190,
           "mp": 0,
           "died": false
         }
@@ -440,7 +518,7 @@
           "id": "spawn",
           "creature_id": "creature",
           "spawn_seq": 1,
-          "hp": 293,
+          "hp": 272,
           "is_alive": true,
           "damaged": true,
           "hostile_attempt": true,
@@ -493,9 +571,27 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "attack",
           "abilityKey": "cutting_words",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 21,
+          "meta": {
+            "isCrit": false,
+            "roll": 16,
+            "total": 32,
+            "damageType": "psychic",
+            "weaponDie": null
+          },
           "seq": 0
         },
         {
@@ -553,10 +649,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],

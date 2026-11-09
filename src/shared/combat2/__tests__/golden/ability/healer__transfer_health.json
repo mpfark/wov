@@ -6,7 +6,14 @@
       "characters": [
         {
           "id": "hero",
-          "hp": 399,
+          "hp": 383,
+          "cp": 175,
+          "mp": 0,
+          "died": false
+        },
+        {
+          "id": "ally",
+          "hp": 416,
           "cp": 200,
           "mp": 0,
           "died": false
@@ -70,9 +77,26 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "invalid_ally_target",
+          "kind": "hp_transfer",
           "abilityKey": "transfer_health",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "amount": 16,
+          "meta": {
+            "reserveHp": 3,
+            "requested": 16,
+            "applied": 16,
+            "wasted": 0,
+            "removedFromCaster": 16
+          },
           "seq": 0
         },
         {
@@ -133,7 +157,7 @@
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -147,7 +171,14 @@
       "characters": [
         {
           "id": "hero",
-          "hp": 391,
+          "hp": 375,
+          "cp": 175,
+          "mp": 0,
+          "died": false
+        },
+        {
+          "id": "ally",
+          "hp": 416,
           "cp": 200,
           "mp": 0,
           "died": false
@@ -211,9 +242,26 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "invalid_ally_target",
+          "kind": "hp_transfer",
           "abilityKey": "transfer_health",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "amount": 16,
+          "meta": {
+            "reserveHp": 3,
+            "requested": 16,
+            "applied": 16,
+            "wasted": 0,
+            "removedFromCaster": 16
+          },
           "seq": 0
         },
         {
@@ -274,7 +322,7 @@
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -288,7 +336,14 @@
       "characters": [
         {
           "id": "hero",
-          "hp": 389,
+          "hp": 373,
+          "cp": 175,
+          "mp": 0,
+          "died": false
+        },
+        {
+          "id": "ally",
+          "hp": 416,
           "cp": 200,
           "mp": 0,
           "died": false
@@ -352,9 +407,26 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "invalid_ally_target",
+          "kind": "hp_transfer",
           "abilityKey": "transfer_health",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "amount": 16,
+          "meta": {
+            "reserveHp": 3,
+            "requested": 16,
+            "applied": 16,
+            "wasted": 0,
+            "removedFromCaster": 16
+          },
           "seq": 0
         },
         {
@@ -415,7 +487,7 @@
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -429,7 +501,14 @@
       "characters": [
         {
           "id": "hero",
-          "hp": 393,
+          "hp": 377,
+          "cp": 175,
+          "mp": 0,
+          "died": false
+        },
+        {
+          "id": "ally",
+          "hp": 416,
           "cp": 200,
           "mp": 0,
           "died": false
@@ -493,9 +572,26 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "invalid_ally_target",
+          "kind": "hp_transfer",
           "abilityKey": "transfer_health",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "character",
+            "id": "ally",
+            "name": "ally"
+          },
+          "amount": 16,
+          "meta": {
+            "reserveHp": 3,
+            "requested": 16,
+            "applied": 16,
+            "wasted": 0,
+            "removedFromCaster": 16
+          },
           "seq": 0
         },
         {
@@ -556,7 +652,7 @@
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],

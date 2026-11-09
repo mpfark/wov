@@ -7,7 +7,7 @@
         {
           "id": "hero",
           "hp": 399,
-          "cp": 200,
+          "cp": 160,
           "mp": 0,
           "died": false
         }
@@ -26,6 +26,32 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "control",
+          "effect_type": "natures_snare",
+          "ability_key": "natures_snare",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0.28464101615137755,
+          "config": {
+            "control_mode": "damage_reduction",
+            "activated_at_tick": 6,
+            "expires_after_tick": 12,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "node_creature_id": "spawn",
+            "spawn_seq": 1,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "max_stacks": 1,
+            "damage_type": "nature"
+          },
+          "expires_at": "2026-09-09T12:00:13.000Z",
+          "next_due_at": null,
+          "interval_ms": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -70,9 +96,24 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "debuff_applied",
           "abilityKey": "natures_snare",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "amount": 0.28464101615137755,
+          "meta": {
+            "effectKind": "control",
+            "durationMs": 11000,
+            "intervalMs": null
+          },
           "seq": 0
         },
         {
@@ -130,10 +171,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "debuff",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -148,7 +197,7 @@
         {
           "id": "hero",
           "hp": 391,
-          "cp": 200,
+          "cp": 160,
           "mp": 0,
           "died": false
         }
@@ -167,6 +216,32 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "control",
+          "effect_type": "natures_snare",
+          "ability_key": "natures_snare",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0.28464101615137755,
+          "config": {
+            "control_mode": "damage_reduction",
+            "activated_at_tick": 6,
+            "expires_after_tick": 12,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "node_creature_id": "spawn",
+            "spawn_seq": 1,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "max_stacks": 1,
+            "damage_type": "nature"
+          },
+          "expires_at": "2026-09-09T12:00:13.000Z",
+          "next_due_at": null,
+          "interval_ms": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -211,9 +286,24 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "debuff_applied",
           "abilityKey": "natures_snare",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "amount": 0.28464101615137755,
+          "meta": {
+            "effectKind": "control",
+            "durationMs": 11000,
+            "intervalMs": null
+          },
           "seq": 0
         },
         {
@@ -271,10 +361,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "debuff",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -289,7 +387,7 @@
         {
           "id": "hero",
           "hp": 389,
-          "cp": 200,
+          "cp": 160,
           "mp": 0,
           "died": false
         }
@@ -308,6 +406,32 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "control",
+          "effect_type": "natures_snare",
+          "ability_key": "natures_snare",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0.28464101615137755,
+          "config": {
+            "control_mode": "damage_reduction",
+            "activated_at_tick": 6,
+            "expires_after_tick": 12,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "node_creature_id": "spawn",
+            "spawn_seq": 1,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "max_stacks": 1,
+            "damage_type": "nature"
+          },
+          "expires_at": "2026-09-09T12:00:13.000Z",
+          "next_due_at": null,
+          "interval_ms": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -352,9 +476,24 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "debuff_applied",
           "abilityKey": "natures_snare",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "amount": 0.28464101615137755,
+          "meta": {
+            "effectKind": "control",
+            "durationMs": 11000,
+            "intervalMs": null
+          },
           "seq": 0
         },
         {
@@ -412,10 +551,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "debuff",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -430,7 +577,7 @@
         {
           "id": "hero",
           "hp": 393,
-          "cp": 200,
+          "cp": 160,
           "mp": 0,
           "died": false
         }
@@ -449,6 +596,32 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "control",
+          "effect_type": "natures_snare",
+          "ability_key": "natures_snare",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0.28464101615137755,
+          "config": {
+            "control_mode": "damage_reduction",
+            "activated_at_tick": 6,
+            "expires_after_tick": 12,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "node_creature_id": "spawn",
+            "spawn_seq": 1,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "max_stacks": 1,
+            "damage_type": "nature"
+          },
+          "expires_at": "2026-09-09T12:00:13.000Z",
+          "next_due_at": null,
+          "interval_ms": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -493,9 +666,24 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "debuff_applied",
           "abilityKey": "natures_snare",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "amount": 0.28464101615137755,
+          "meta": {
+            "effectKind": "control",
+            "durationMs": 11000,
+            "intervalMs": null
+          },
           "seq": 0
         },
         {
@@ -553,10 +741,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "debuff",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],

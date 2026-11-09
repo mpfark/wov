@@ -10,6 +10,7 @@ import inventory from '@/shared/combat/inventory/active-abilities.json';
 import { buildAbilityCatalog, type AuthoredAbilityInventory } from '../catalog';
 import { resolveNodeTick } from '../resolver';
 import type { NodeSnapshot, SnapshotFighter } from '../types';
+import { applyTick } from './golden-apply';
 
 const authored = inventory as AuthoredAbilityInventory;
 const catalog = buildAbilityCatalog(authored.abilities, authored.statuses);
@@ -18,8 +19,8 @@ const NOW = '2026-09-09T12:00:00.000Z';
 const SEEDS = ['g-a', 'g-b', 'g-c', 'g-d'];
 
 function fighter(id: string, cls: string, cp = 200): SnapshotFighter {
-  return { id: `f-${id}`, character_id: id, entry_seq: 1, present: true, party_id: null,
-    party_id_at_entry: null, name: id, class: cls, race: 'human', level: 20, hp: 400, max_hp: 500,
+  return { id: `f-${id}`, character_id: id, entry_seq: 1, present: true, party_id: 'party',
+    party_id_at_entry: 'party', name: id, class: cls, race: 'human', level: 20, hp: 400, max_hp: 500,
     cp, max_cp: 200, mp: 0, max_mp: 0, ac: 14, str: 18, dex: 16, con: 16, int: 18, wis: 16, cha: 16,
     equipment: [] };
 }
@@ -45,6 +46,11 @@ function snapshot(seed: string, fighters: SnapshotFighter[], intents: NodeSnapsh
   } as NodeSnapshot;
 }
 
+const SHIELD = { slot: 'off_hand', item_id: 'shield', inventory_id: 'inv-shield', character_id: 'hero',
+  durability: 100, max_durability: 100, applied_gems: {}, stat_override: null, base_stats: {},
+  crafted_level: null, item_present: true, item_type: 'equipment', weapon_tag: 'shield', hands: 1,
+  item_level: 20, rarity: 'common', procs: [] } as unknown as SnapshotFighter['equipment'][number];
+
 const classAbilities = [...catalog.specs.entries()]
   .filter(([key]) => key.includes(':'))
   .sort(([a], [b]) => a.localeCompare(b));
@@ -58,10 +64,15 @@ describe('golden master: combat2 resolver', () => {
   it.each(classAbilities)('ability %s', async (key, spec) => {
     const cls = key.split(':')[0];
     const runs = SEEDS.map(seed => {
-      const target = spec.targetType === 'enemy' ? 'spawn' : null;
+      const ally = spec.targetType === 'ally';
       const intent = { id: 'i1', seq: 1, character_id: 'hero', intent_kind: 'ability',
-        ability_key: spec.abilityKey, stance_key: null, target_creature_id: target } as NodeSnapshot['intents'][number];
-      return { seed, out: resolveNodeTick(snapshot(seed, [fighter('hero', cls), fighter('ally', 'healer')], [intent]), deps) };
+        ability_key: spec.abilityKey, stance_key: null,
+        target_creature_id: spec.targetType === 'enemy' ? 'creature' : null,
+        target_character_id: ally ? 'ally' : null, target_fighter_id: ally ? 'f-ally' : null,
+        target_entry_seq: ally ? 1 : null } as NodeSnapshot['intents'][number];
+      const hero = fighter('hero', cls);
+      if (spec.requiresShield) hero.equipment = [SHIELD];
+      return { seed, out: resolveNodeTick(snapshot(seed, [hero, fighter('ally', 'healer')], [intent]), deps) };
     });
     await expect(JSON.stringify(runs, null, 2)).toMatchFileSnapshot(`golden/ability/${key.replace(':', '__')}.json`);
   });
@@ -70,5 +81,32 @@ describe('golden master: combat2 resolver', () => {
     const runs = SEEDS.map(seed => ({ seed,
       out: resolveNodeTick(snapshot(seed, [fighter('hero', 'warrior'), fighter('ally', 'ranger')], []), deps) }));
     await expect(JSON.stringify(runs, null, 2)).toMatchFileSnapshot('golden/basic-attack.json');
+  });
+
+  const CLASSES = [...new Set(classAbilities.map(([k]) => k.split(':')[0]))];
+  it.each(CLASSES)('8-round fight rotating %s abilities', async cls => {
+    const rotation = classAbilities.filter(([k]) => k.startsWith(`${cls}:`)).map(([, s]) => s);
+    const intentFor = (round: number): NodeSnapshot['intents'] => {
+      const spec = rotation[round % rotation.length];
+      const ally = spec.targetType === 'ally';
+      return [{ id: `i${round}`, seq: round + 1, character_id: 'hero', intent_kind: 'ability',
+        ability_key: spec.abilityKey, stance_key: null,
+        target_creature_id: spec.targetType === 'enemy' ? 'creature' : null,
+        target_character_id: ally ? 'ally' : null, target_fighter_id: ally ? 'f-ally' : null,
+        target_entry_seq: ally ? 1 : null } as NodeSnapshot['intents'][number]];
+    };
+    const hero = fighter('hero', cls);
+    if (rotation.some(s => s.requiresShield)) hero.equipment = [SHIELD];
+    let state = snapshot(`fight-${cls}`, [hero, fighter('ally', 'warrior')], intentFor(0));
+    state.creatures[0].hp = state.creatures[0].max_hp = 2000;
+    const rounds = [];
+    for (let r = 0; r < 8; r++) {
+      const out = resolveNodeTick(state, deps);
+      rounds.push({ round: r, events: out.events, effects_after: out.effects_insert.length });
+      state = applyTick(state, out, intentFor(r + 1));
+    }
+    rounds.push({ final: { fighters: state.fighters.map(f => [f.character_id, f.hp, f.cp]),
+      creature_hp: state.creatures[0].hp, effects: state.effects.map(e => [e.kind, e.effect_type, e.stacks, e.magnitude]) } });
+    await expect(JSON.stringify(rounds, null, 2)).toMatchFileSnapshot(`golden/fight/${cls}.json`);
   });
 });

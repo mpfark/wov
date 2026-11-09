@@ -7,7 +7,7 @@
         {
           "id": "hero",
           "hp": 399,
-          "cp": 200,
+          "cp": 160,
           "mp": 0,
           "died": false
         }
@@ -26,6 +26,53 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "dot",
+          "effect_type": "bleed",
+          "ability_key": "rend",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 5,
+          "config": {
+            "max_stacks": 5,
+            "effect_noun": "bleed",
+            "weapon_based": true,
+            "duration_stat": "dex",
+            "magnitude_stat": "str",
+            "status_key": "bleed",
+            "status_label": "Bleed",
+            "status_classification": "dot",
+            "status_trigger": "ability_hit",
+            "status_chance_pct": 100,
+            "status_enabled": true,
+            "effect_type": "bleed",
+            "stack_noun": "bleed",
+            "tick_rate_ms": 2000,
+            "dot_stat_mult": 1,
+            "dot_global_mult": 0.67,
+            "dot_stat": "str",
+            "dot_duration_ms": 20000,
+            "max_stacks_calc": {
+              "base": 5,
+              "unit": "count",
+              "terms": []
+            },
+            "activated_at_tick": 6,
+            "expires_after_tick": 18,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "node_creature_id": "spawn",
+            "spawn_seq": 1,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "damage_type": "physical"
+          },
+          "expires_at": "2026-09-09T12:00:25.000Z",
+          "next_due_at": "2026-09-09T12:00:04.000Z",
+          "interval_ms": 2000,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -70,9 +117,24 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "dot_applied",
           "abilityKey": "rend",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "amount": 5,
+          "meta": {
+            "effectKind": "dot",
+            "durationMs": 23000,
+            "intervalMs": 2000
+          },
           "seq": 0
         },
         {
@@ -130,10 +192,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "debuff",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -148,7 +218,7 @@
         {
           "id": "hero",
           "hp": 391,
-          "cp": 200,
+          "cp": 160,
           "mp": 0,
           "died": false
         }
@@ -167,6 +237,53 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "dot",
+          "effect_type": "bleed",
+          "ability_key": "rend",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 5,
+          "config": {
+            "max_stacks": 5,
+            "effect_noun": "bleed",
+            "weapon_based": true,
+            "duration_stat": "dex",
+            "magnitude_stat": "str",
+            "status_key": "bleed",
+            "status_label": "Bleed",
+            "status_classification": "dot",
+            "status_trigger": "ability_hit",
+            "status_chance_pct": 100,
+            "status_enabled": true,
+            "effect_type": "bleed",
+            "stack_noun": "bleed",
+            "tick_rate_ms": 2000,
+            "dot_stat_mult": 1,
+            "dot_global_mult": 0.67,
+            "dot_stat": "str",
+            "dot_duration_ms": 20000,
+            "max_stacks_calc": {
+              "base": 5,
+              "unit": "count",
+              "terms": []
+            },
+            "activated_at_tick": 6,
+            "expires_after_tick": 18,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "node_creature_id": "spawn",
+            "spawn_seq": 1,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "damage_type": "physical"
+          },
+          "expires_at": "2026-09-09T12:00:25.000Z",
+          "next_due_at": "2026-09-09T12:00:04.000Z",
+          "interval_ms": 2000,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -211,9 +328,24 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "dot_applied",
           "abilityKey": "rend",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "amount": 5,
+          "meta": {
+            "effectKind": "dot",
+            "durationMs": 23000,
+            "intervalMs": 2000
+          },
           "seq": 0
         },
         {
@@ -271,10 +403,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "debuff",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -289,7 +429,7 @@
         {
           "id": "hero",
           "hp": 389,
-          "cp": 200,
+          "cp": 160,
           "mp": 0,
           "died": false
         }
@@ -308,6 +448,53 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "dot",
+          "effect_type": "bleed",
+          "ability_key": "rend",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 5,
+          "config": {
+            "max_stacks": 5,
+            "effect_noun": "bleed",
+            "weapon_based": true,
+            "duration_stat": "dex",
+            "magnitude_stat": "str",
+            "status_key": "bleed",
+            "status_label": "Bleed",
+            "status_classification": "dot",
+            "status_trigger": "ability_hit",
+            "status_chance_pct": 100,
+            "status_enabled": true,
+            "effect_type": "bleed",
+            "stack_noun": "bleed",
+            "tick_rate_ms": 2000,
+            "dot_stat_mult": 1,
+            "dot_global_mult": 0.67,
+            "dot_stat": "str",
+            "dot_duration_ms": 20000,
+            "max_stacks_calc": {
+              "base": 5,
+              "unit": "count",
+              "terms": []
+            },
+            "activated_at_tick": 6,
+            "expires_after_tick": 18,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "node_creature_id": "spawn",
+            "spawn_seq": 1,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "damage_type": "physical"
+          },
+          "expires_at": "2026-09-09T12:00:25.000Z",
+          "next_due_at": "2026-09-09T12:00:04.000Z",
+          "interval_ms": 2000,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -352,9 +539,24 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "dot_applied",
           "abilityKey": "rend",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "amount": 5,
+          "meta": {
+            "effectKind": "dot",
+            "durationMs": 23000,
+            "intervalMs": 2000
+          },
           "seq": 0
         },
         {
@@ -412,10 +614,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "debuff",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -430,7 +640,7 @@
         {
           "id": "hero",
           "hp": 393,
-          "cp": 200,
+          "cp": 160,
           "mp": 0,
           "died": false
         }
@@ -449,6 +659,53 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "dot",
+          "effect_type": "bleed",
+          "ability_key": "rend",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 5,
+          "config": {
+            "max_stacks": 5,
+            "effect_noun": "bleed",
+            "weapon_based": true,
+            "duration_stat": "dex",
+            "magnitude_stat": "str",
+            "status_key": "bleed",
+            "status_label": "Bleed",
+            "status_classification": "dot",
+            "status_trigger": "ability_hit",
+            "status_chance_pct": 100,
+            "status_enabled": true,
+            "effect_type": "bleed",
+            "stack_noun": "bleed",
+            "tick_rate_ms": 2000,
+            "dot_stat_mult": 1,
+            "dot_global_mult": 0.67,
+            "dot_stat": "str",
+            "dot_duration_ms": 20000,
+            "max_stacks_calc": {
+              "base": 5,
+              "unit": "count",
+              "terms": []
+            },
+            "activated_at_tick": 6,
+            "expires_after_tick": 18,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "node_creature_id": "spawn",
+            "spawn_seq": 1,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "damage_type": "physical"
+          },
+          "expires_at": "2026-09-09T12:00:25.000Z",
+          "next_due_at": "2026-09-09T12:00:04.000Z",
+          "interval_ms": 2000,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -493,9 +750,24 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "dot_applied",
           "abilityKey": "rend",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "amount": 5,
+          "meta": {
+            "effectKind": "dot",
+            "durationMs": 23000,
+            "intervalMs": 2000
+          },
           "seq": 0
         },
         {
@@ -553,10 +825,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "debuff",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],

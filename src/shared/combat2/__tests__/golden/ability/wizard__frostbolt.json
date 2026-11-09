@@ -7,7 +7,7 @@
         {
           "id": "hero",
           "hp": 399,
-          "cp": 200,
+          "cp": 190,
           "mp": 0,
           "died": false
         }
@@ -17,7 +17,7 @@
           "id": "spawn",
           "creature_id": "creature",
           "spawn_seq": 1,
-          "hp": 295,
+          "hp": 276,
           "is_alive": true,
           "damaged": true,
           "hostile_attempt": true,
@@ -26,6 +26,41 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "amplification",
+          "effect_type": "chilled",
+          "ability_key": "frostbolt",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "max_stacks": 1,
+            "damage_type": null,
+            "activated_at_tick": 6,
+            "expires_after_tick": 9,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "modifier_kind": "damage_taken_pct",
+            "damage_taken_pct": 10,
+            "eligible_sources": [
+              "weapon",
+              "ability",
+              "stance",
+              "dot",
+              "proc"
+            ]
+          },
+          "expires_at": "2026-09-09T12:00:08.000Z",
+          "next_due_at": null,
+          "interval_ms": null,
+          "last_pulse_tick": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -70,10 +105,51 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "attack",
           "abilityKey": "frostbolt",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "normal",
+          "amount": 19,
+          "meta": {
+            "isCrit": false,
+            "roll": 2,
+            "total": 17,
+            "damageType": "frost",
+            "weaponDie": null
+          },
           "seq": 0
+        },
+        {
+          "kind": "status_applied",
+          "abilityKey": "frostbolt",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "amount": 1,
+          "meta": {
+            "status": "chilled",
+            "stacks": 1,
+            "maxStacks": 1,
+            "durationMs": 6000,
+            "chancePct": 100
+          },
+          "seq": 1
         },
         {
           "kind": "attack",
@@ -95,7 +171,7 @@
             "damageType": "physical",
             "weaponDie": 3
           },
-          "seq": 1
+          "seq": 2
         },
         {
           "kind": "creature_attack",
@@ -120,7 +196,7 @@
             "blocked": 0,
             "absorbed": 0
           },
-          "seq": 2
+          "seq": 3
         }
       ],
       "intent_ids": [
@@ -130,10 +206,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -148,7 +232,7 @@
         {
           "id": "hero",
           "hp": 391,
-          "cp": 200,
+          "cp": 190,
           "mp": 0,
           "died": false
         }
@@ -158,7 +242,7 @@
           "id": "spawn",
           "creature_id": "creature",
           "spawn_seq": 1,
-          "hp": 295,
+          "hp": 276,
           "is_alive": true,
           "damaged": true,
           "hostile_attempt": true,
@@ -167,6 +251,41 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "amplification",
+          "effect_type": "chilled",
+          "ability_key": "frostbolt",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "max_stacks": 1,
+            "damage_type": null,
+            "activated_at_tick": 6,
+            "expires_after_tick": 9,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "modifier_kind": "damage_taken_pct",
+            "damage_taken_pct": 10,
+            "eligible_sources": [
+              "weapon",
+              "ability",
+              "stance",
+              "dot",
+              "proc"
+            ]
+          },
+          "expires_at": "2026-09-09T12:00:08.000Z",
+          "next_due_at": null,
+          "interval_ms": null,
+          "last_pulse_tick": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -211,10 +330,51 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "attack",
           "abilityKey": "frostbolt",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "normal",
+          "amount": 19,
+          "meta": {
+            "isCrit": false,
+            "roll": 4,
+            "total": 19,
+            "damageType": "frost",
+            "weaponDie": null
+          },
           "seq": 0
+        },
+        {
+          "kind": "status_applied",
+          "abilityKey": "frostbolt",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "amount": 1,
+          "meta": {
+            "status": "chilled",
+            "stacks": 1,
+            "maxStacks": 1,
+            "durationMs": 6000,
+            "chancePct": 100
+          },
+          "seq": 1
         },
         {
           "kind": "attack",
@@ -236,7 +396,7 @@
             "damageType": "physical",
             "weaponDie": 3
           },
-          "seq": 1
+          "seq": 2
         },
         {
           "kind": "creature_attack",
@@ -261,7 +421,7 @@
             "blocked": 0,
             "absorbed": 0
           },
-          "seq": 2
+          "seq": 3
         }
       ],
       "intent_ids": [
@@ -271,10 +431,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -289,7 +457,7 @@
         {
           "id": "hero",
           "hp": 389,
-          "cp": 200,
+          "cp": 190,
           "mp": 0,
           "died": false
         }
@@ -299,7 +467,7 @@
           "id": "spawn",
           "creature_id": "creature",
           "spawn_seq": 1,
-          "hp": 293,
+          "hp": 270,
           "is_alive": true,
           "damaged": true,
           "hostile_attempt": true,
@@ -308,6 +476,41 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "amplification",
+          "effect_type": "chilled",
+          "ability_key": "frostbolt",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "max_stacks": 1,
+            "damage_type": null,
+            "activated_at_tick": 6,
+            "expires_after_tick": 9,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "modifier_kind": "damage_taken_pct",
+            "damage_taken_pct": 10,
+            "eligible_sources": [
+              "weapon",
+              "ability",
+              "stance",
+              "dot",
+              "proc"
+            ]
+          },
+          "expires_at": "2026-09-09T12:00:08.000Z",
+          "next_due_at": null,
+          "interval_ms": null,
+          "last_pulse_tick": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -352,10 +555,51 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "attack",
           "abilityKey": "frostbolt",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 23,
+          "meta": {
+            "isCrit": false,
+            "roll": 16,
+            "total": 31,
+            "damageType": "frost",
+            "weaponDie": null
+          },
           "seq": 0
+        },
+        {
+          "kind": "status_applied",
+          "abilityKey": "frostbolt",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "amount": 1,
+          "meta": {
+            "status": "chilled",
+            "stacks": 1,
+            "maxStacks": 1,
+            "durationMs": 6000,
+            "chancePct": 100
+          },
+          "seq": 1
         },
         {
           "kind": "attack",
@@ -377,7 +621,7 @@
             "damageType": "physical",
             "weaponDie": 3
           },
-          "seq": 1
+          "seq": 2
         },
         {
           "kind": "creature_attack",
@@ -402,7 +646,7 @@
             "blocked": 0,
             "absorbed": 0
           },
-          "seq": 2
+          "seq": 3
         }
       ],
       "intent_ids": [
@@ -412,10 +656,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -430,7 +682,7 @@
         {
           "id": "hero",
           "hp": 393,
-          "cp": 200,
+          "cp": 190,
           "mp": 0,
           "died": false
         }
@@ -440,7 +692,7 @@
           "id": "spawn",
           "creature_id": "creature",
           "spawn_seq": 1,
-          "hp": 293,
+          "hp": 270,
           "is_alive": true,
           "damaged": true,
           "hostile_attempt": true,
@@ -449,6 +701,41 @@
         }
       ],
       "effects_insert": [
+        {
+          "kind": "amplification",
+          "effect_type": "chilled",
+          "ability_key": "frostbolt",
+          "target_creature_id": "creature",
+          "source_character_id": "hero",
+          "stacks": 1,
+          "magnitude": 0,
+          "config": {
+            "node_creature_id": "spawn",
+            "spawn_seq": 1,
+            "source_fighter_id": "f-hero",
+            "source_entry_seq": 1,
+            "max_stacks": 1,
+            "damage_type": null,
+            "activated_at_tick": 6,
+            "expires_after_tick": 9,
+            "interval_ticks": 1,
+            "next_pulse_tick": 7,
+            "modifier_kind": "damage_taken_pct",
+            "damage_taken_pct": 10,
+            "eligible_sources": [
+              "weapon",
+              "ability",
+              "stance",
+              "dot",
+              "proc"
+            ]
+          },
+          "expires_at": "2026-09-09T12:00:08.000Z",
+          "next_due_at": null,
+          "interval_ms": null,
+          "last_pulse_tick": null,
+          "is_reservation": false
+        },
         {
           "kind": "autoattack",
           "effect_type": "basic_attack",
@@ -493,10 +780,51 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "attack",
           "abilityKey": "frostbolt",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 23,
+          "meta": {
+            "isCrit": false,
+            "roll": 14,
+            "total": 29,
+            "damageType": "frost",
+            "weaponDie": null
+          },
           "seq": 0
+        },
+        {
+          "kind": "status_applied",
+          "abilityKey": "frostbolt",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "amount": 1,
+          "meta": {
+            "status": "chilled",
+            "stacks": 1,
+            "maxStacks": 1,
+            "durationMs": 6000,
+            "chancePct": 100
+          },
+          "seq": 1
         },
         {
           "kind": "attack",
@@ -518,7 +846,7 @@
             "damageType": "physical",
             "weaponDie": 3
           },
-          "seq": 1
+          "seq": 2
         },
         {
           "kind": "creature_attack",
@@ -543,7 +871,7 @@
             "blocked": 0,
             "absorbed": 0
           },
-          "seq": 2
+          "seq": 3
         }
       ],
       "intent_ids": [
@@ -553,10 +881,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],

@@ -1,0 +1,1165 @@
+[
+  {
+    "round": 0,
+    "events": [
+      {
+        "kind": "aura_started",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "effectKind": "party_regen",
+          "durationMs": 19000,
+          "intervalMs": 2000,
+          "cpPerTick": 0
+        },
+        "seq": 0
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 12,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": true,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 1
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 14,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 2
+      }
+    ],
+    "effects_after": 3
+  },
+  {
+    "round": 1,
+    "events": [
+      {
+        "kind": "party_restore",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "attack",
+        "abilityKey": "cutting_words",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 21,
+        "meta": {
+          "isCrit": false,
+          "roll": 7,
+          "total": 23,
+          "damageType": "psychic",
+          "weaponDie": null
+        },
+        "seq": 2
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 6,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 3
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 15,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0
+        },
+        "seq": 4
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "round": 2,
+    "events": [
+      {
+        "kind": "party_restore",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "passive_cp_regen",
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0
+        },
+        "seq": 2
+      },
+      {
+        "kind": "debuff_applied",
+        "abilityKey": "dissonance",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "amount": 0.29,
+        "meta": {
+          "effectKind": "control",
+          "durationMs": 12000,
+          "intervalMs": null
+        },
+        "seq": 3
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "miss",
+        "outcomeReason": "critical_miss",
+        "amount": 0,
+        "meta": {
+          "basicAttack": true
+        },
+        "seq": 4
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "miss",
+        "amount": 0,
+        "outcomeReason": "critical_miss",
+        "seq": 5
+      }
+    ],
+    "effects_after": 1
+  },
+  {
+    "round": 3,
+    "events": [
+      {
+        "kind": "party_restore",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "attack",
+        "abilityKey": "grand_finale",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 78,
+        "meta": {
+          "isCrit": true,
+          "roll": 19,
+          "total": 35,
+          "damageType": "psychic",
+          "weaponDie": null
+        },
+        "seq": 2
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 12,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": true,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 3
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 2,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0,
+          "outgoingReduced": 2
+        },
+        "seq": 4
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "round": 4,
+    "events": [
+      {
+        "kind": "party_restore",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "passive_cp_regen",
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0
+        },
+        "seq": 2
+      },
+      {
+        "kind": "aura_started",
+        "abilityKey": "inspire",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "effectKind": "party_regen",
+          "durationMs": 92000,
+          "intervalMs": 2000,
+          "cpPerTick": 3
+        },
+        "seq": 3
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 8,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 4
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 2,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0,
+          "outgoingReduced": 2
+        },
+        "seq": 5
+      }
+    ],
+    "effects_after": 1
+  },
+  {
+    "round": 5,
+    "events": [
+      {
+        "kind": "party_restore",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "inspire",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 3,
+          "cpApplied": 0,
+          "cpWasted": 3,
+          "effectKind": "party_regen"
+        },
+        "seq": 2
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "inspire",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 3,
+          "cpApplied": 3,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 3
+      },
+      {
+        "kind": "aura_started",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "effectKind": "party_regen",
+          "durationMs": 19000,
+          "intervalMs": 2000,
+          "cpPerTick": 0
+        },
+        "seq": 4
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 8,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 5
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 4,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0,
+          "outgoingReduced": 3
+        },
+        "seq": 6
+      }
+    ],
+    "effects_after": 1
+  },
+  {
+    "round": 6,
+    "events": [
+      {
+        "kind": "party_restore",
+        "abilityKey": "inspire",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 3,
+          "cpApplied": 0,
+          "cpWasted": 3,
+          "effectKind": "party_regen"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "inspire",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 3,
+          "cpApplied": 3,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 2
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 3
+      },
+      {
+        "kind": "passive_cp_regen",
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0
+        },
+        "seq": 4
+      },
+      {
+        "kind": "attack",
+        "abilityKey": "cutting_words",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 21,
+        "meta": {
+          "isCrit": false,
+          "roll": 17,
+          "total": 33,
+          "damageType": "psychic",
+          "weaponDie": null
+        },
+        "seq": 5
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 6,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": false,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 6
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "glancing",
+        "amount": 3,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0,
+          "outgoingReduced": 5
+        },
+        "seq": 7
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "round": 7,
+    "events": [
+      {
+        "kind": "party_restore",
+        "abilityKey": "inspire",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 3,
+          "cpApplied": 0,
+          "cpWasted": 3,
+          "effectKind": "party_regen"
+        },
+        "seq": 0
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "inspire",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 3,
+          "cpApplied": 3,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 1
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 2
+      },
+      {
+        "kind": "party_restore",
+        "abilityKey": "crescendo",
+        "actor": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "amount": 5,
+        "meta": {
+          "requested": 5,
+          "applied": 5,
+          "wasted": 0,
+          "cpRequested": 0,
+          "cpApplied": 0,
+          "cpWasted": 0,
+          "effectKind": "party_regen"
+        },
+        "seq": 3
+      },
+      {
+        "kind": "action_rejected",
+        "outcomeReason": "insufficient_cp",
+        "abilityKey": "dissonance",
+        "seq": 4
+      },
+      {
+        "kind": "attack",
+        "actor": {
+          "type": "character",
+          "id": "ally",
+          "name": "ally"
+        },
+        "target": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "hitQuality": "strong",
+        "amount": 9,
+        "meta": {
+          "basicAttack": true,
+          "isCrit": true,
+          "damageType": "physical",
+          "weaponDie": 3
+        },
+        "seq": 5
+      },
+      {
+        "kind": "creature_attack",
+        "actor": {
+          "type": "creature",
+          "id": "creature",
+          "name": "Golden Wolf"
+        },
+        "target": {
+          "type": "character",
+          "id": "hero",
+          "name": "hero"
+        },
+        "hitQuality": "normal",
+        "amount": 12,
+        "meta": {
+          "isCrit": false,
+          "percentMitigated": 0,
+          "shieldBonusApplied": 0,
+          "critSoftened": 0,
+          "flatMitigated": 0,
+          "blocked": 0,
+          "absorbed": 0,
+          "outgoingReduced": 6
+        },
+        "seq": 6
+      }
+    ],
+    "effects_after": 0
+  },
+  {
+    "final": {
+      "fighters": [
+        [
+          "hero",
+          398,
+          24
+        ],
+        [
+          "ally",
+          450,
+          200
+        ]
+      ],
+      "creature_hp": 1819,
+      "effects": [
+        [
+          "autoattack",
+          "basic_attack",
+          1,
+          0
+        ],
+        [
+          "autoattack",
+          "basic_attack",
+          1,
+          0
+        ],
+        [
+          "control",
+          "dissonance",
+          1,
+          0.29
+        ],
+        [
+          "party_regen",
+          "inspire",
+          1,
+          5
+        ],
+        [
+          "party_regen",
+          "crescendo",
+          1,
+          5
+        ]
+      ]
+    }
+  }
+]

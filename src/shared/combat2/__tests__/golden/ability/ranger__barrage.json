@@ -7,7 +7,7 @@
         {
           "id": "hero",
           "hp": 399,
-          "cp": 200,
+          "cp": 175,
           "mp": 0,
           "died": false
         }
@@ -17,7 +17,7 @@
           "id": "spawn",
           "creature_id": "creature",
           "spawn_seq": 1,
-          "hp": 295,
+          "hp": 291,
           "is_alive": true,
           "damaged": true,
           "hostile_attempt": true,
@@ -70,10 +70,84 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "attack",
           "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "normal",
+          "amount": 2,
+          "meta": {
+            "isCrit": false,
+            "roll": 4,
+            "total": 20,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
           "seq": 0
+        },
+        {
+          "kind": "attack",
+          "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "miss",
+          "outcomeReason": "critical_miss",
+          "amount": 0,
+          "seq": 1
+        },
+        {
+          "kind": "attack",
+          "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "normal",
+          "amount": 2,
+          "meta": {
+            "isCrit": false,
+            "roll": 2,
+            "total": 18,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 2
+        },
+        {
+          "kind": "multi_attack_summary",
+          "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "amount": 4,
+          "meta": {
+            "attacks": 3
+          },
+          "seq": 3
         },
         {
           "kind": "attack",
@@ -95,7 +169,7 @@
             "damageType": "physical",
             "weaponDie": 3
           },
-          "seq": 1
+          "seq": 4
         },
         {
           "kind": "creature_attack",
@@ -120,7 +194,7 @@
             "blocked": 0,
             "absorbed": 0
           },
-          "seq": 2
+          "seq": 5
         }
       ],
       "intent_ids": [
@@ -130,10 +204,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -148,7 +230,7 @@
         {
           "id": "hero",
           "hp": 391,
-          "cp": 200,
+          "cp": 175,
           "mp": 0,
           "died": false
         }
@@ -158,7 +240,7 @@
           "id": "spawn",
           "creature_id": "creature",
           "spawn_seq": 1,
-          "hp": 295,
+          "hp": 287,
           "is_alive": true,
           "damaged": true,
           "hostile_attempt": true,
@@ -211,10 +293,90 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "attack",
           "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 3,
+          "meta": {
+            "isCrit": false,
+            "roll": 13,
+            "total": 29,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
           "seq": 0
+        },
+        {
+          "kind": "attack",
+          "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 3,
+          "meta": {
+            "isCrit": false,
+            "roll": 14,
+            "total": 30,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 1
+        },
+        {
+          "kind": "attack",
+          "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 2,
+          "meta": {
+            "isCrit": false,
+            "roll": 13,
+            "total": 29,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 2
+        },
+        {
+          "kind": "multi_attack_summary",
+          "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "amount": 8,
+          "meta": {
+            "attacks": 3
+          },
+          "seq": 3
         },
         {
           "kind": "attack",
@@ -236,7 +398,7 @@
             "damageType": "physical",
             "weaponDie": 3
           },
-          "seq": 1
+          "seq": 4
         },
         {
           "kind": "creature_attack",
@@ -261,7 +423,7 @@
             "blocked": 0,
             "absorbed": 0
           },
-          "seq": 2
+          "seq": 5
         }
       ],
       "intent_ids": [
@@ -271,10 +433,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -289,7 +459,7 @@
         {
           "id": "hero",
           "hp": 389,
-          "cp": 200,
+          "cp": 175,
           "mp": 0,
           "died": false
         }
@@ -299,7 +469,7 @@
           "id": "spawn",
           "creature_id": "creature",
           "spawn_seq": 1,
-          "hp": 293,
+          "hp": 286,
           "is_alive": true,
           "damaged": true,
           "hostile_attempt": true,
@@ -352,10 +522,90 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "attack",
           "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "normal",
+          "amount": 3,
+          "meta": {
+            "isCrit": false,
+            "roll": 2,
+            "total": 18,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
           "seq": 0
+        },
+        {
+          "kind": "attack",
+          "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 2,
+          "meta": {
+            "isCrit": false,
+            "roll": 17,
+            "total": 33,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 1
+        },
+        {
+          "kind": "attack",
+          "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 2,
+          "meta": {
+            "isCrit": false,
+            "roll": 8,
+            "total": 24,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 2
+        },
+        {
+          "kind": "multi_attack_summary",
+          "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "amount": 7,
+          "meta": {
+            "attacks": 3
+          },
+          "seq": 3
         },
         {
           "kind": "attack",
@@ -377,7 +627,7 @@
             "damageType": "physical",
             "weaponDie": 3
           },
-          "seq": 1
+          "seq": 4
         },
         {
           "kind": "creature_attack",
@@ -402,7 +652,7 @@
             "blocked": 0,
             "absorbed": 0
           },
-          "seq": 2
+          "seq": 5
         }
       ],
       "intent_ids": [
@@ -412,10 +662,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
@@ -430,7 +688,7 @@
         {
           "id": "hero",
           "hp": 393,
-          "cp": 200,
+          "cp": 175,
           "mp": 0,
           "died": false
         }
@@ -440,7 +698,7 @@
           "id": "spawn",
           "creature_id": "creature",
           "spawn_seq": 1,
-          "hp": 293,
+          "hp": 284,
           "is_alive": true,
           "damaged": true,
           "hostile_attempt": true,
@@ -493,10 +751,90 @@
       "equipment_fence": [],
       "events": [
         {
-          "kind": "action_rejected",
-          "outcomeReason": "no_target",
+          "kind": "attack",
           "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "normal",
+          "amount": 2,
+          "meta": {
+            "isCrit": false,
+            "roll": 3,
+            "total": 19,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
           "seq": 0
+        },
+        {
+          "kind": "attack",
+          "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "strong",
+          "amount": 3,
+          "meta": {
+            "isCrit": false,
+            "roll": 9,
+            "total": 25,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 1
+        },
+        {
+          "kind": "attack",
+          "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "target": {
+            "type": "creature",
+            "id": "creature",
+            "name": "Golden Wolf"
+          },
+          "hitQuality": "normal",
+          "amount": 4,
+          "meta": {
+            "isCrit": false,
+            "roll": 3,
+            "total": 19,
+            "damageType": "physical",
+            "weaponDie": 3
+          },
+          "seq": 2
+        },
+        {
+          "kind": "multi_attack_summary",
+          "abilityKey": "barrage",
+          "actor": {
+            "type": "character",
+            "id": "hero",
+            "name": "hero"
+          },
+          "amount": 9,
+          "meta": {
+            "attacks": 3
+          },
+          "seq": 3
         },
         {
           "kind": "attack",
@@ -518,7 +856,7 @@
             "damageType": "physical",
             "weaponDie": 3
           },
-          "seq": 1
+          "seq": 4
         },
         {
           "kind": "creature_attack",
@@ -543,7 +881,7 @@
             "blocked": 0,
             "absorbed": 0
           },
-          "seq": 2
+          "seq": 5
         }
       ],
       "intent_ids": [
@@ -553,10 +891,18 @@
         {
           "creature_id": "creature",
           "spawn_seq": 1,
+          "character_id": "hero",
+          "qualification": "qualified",
+          "qualified_by": "damage",
+          "party_id_at_qualification": "party"
+        },
+        {
+          "creature_id": "creature",
+          "spawn_seq": 1,
           "character_id": "ally",
           "qualification": "qualified",
           "qualified_by": "damage",
-          "party_id_at_qualification": null
+          "party_id_at_qualification": "party"
         }
       ],
       "pending_event_ids": [],
