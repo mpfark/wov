@@ -18,19 +18,14 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import StatusBarsStrip, { StatusBarsStripProps } from '@/features/character/components/StatusBarsStrip';
-import HeartbeatIndicator from '@/components/game/HeartbeatIndicator';
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
 import { useAreaTypes } from '@/features/world';
 import { getAreaHeaderColor } from '@/features/world';
 import LocationBackground from './LocationBackground';
-import { Combat2EffectPills } from '@/features/combat2/Combat2EffectPills';
-import { Combat2TelegraphIndicator } from '@/features/combat2/Combat2TelegraphIndicator';
-import { shouldShowAttackControl } from '@/features/combat2/attack-control';
 import type { ActionReadiness } from '@/features/combat2/action-readiness';
 import {
-  combat2CreatureLifeKey,
   type Combat2PresentationEffect,
   type Combat2PresentationTelegraph,
 } from '@/features/combat2/presentation';
@@ -305,207 +300,13 @@ export default function NodeView({
                       {rosterError ? ` (${rosterError})` : ''}
                     </p>
                   )}
-                  {authoritativeTargetSelection ? <EngineCreatureRoster creatures={creatures}
+                  {<EngineCreatureRoster creatures={creatures}
                     rosterActionable={rosterActionable} playerAlive={character.hp > 0} selectedTargetId={selectedTargetId}
                     activeTargetId={activeCombatCreatureId} engagedIds={engagedCreatureIds}
                     pendingTargetId={pendingBasicAttackTargetId} hpOverrides={creatureHpOverrides}
                     effects={authoritativeCreatureEffects} telegraphs={authoritativeTelegraphs}
                     tankByLife={authoritativeTankByCreatureLife} encounterTick={authoritativeEncounterTick}
-                    flashingIds={flashingIds} onSelectTarget={onSelectTarget} onAttack={onAttack} /> : creatures.map(c => {
-                    const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
-                    const isEngaged = authoritativeTargetSelection
-                      ? engagedCreatureIds.includes(c.id)
-                      : !!inCombat && engagedCreatureIds.includes(c.id);
-                    const isSelected = (authoritativeTargetSelection || (!isActiveTarget && !isEngaged)) && selectedTargetId === c.id;
-                    const hpReady = rosterActionable || creatureHpOverrides[c.id] !== undefined;
-                    const displayHp = creatureHpOverrides[c.id] ?? c.hp;
-                    const hpPct = Math.max((displayHp / c.max_hp) * 100, 0);
-                    const creaturePoisonStacks = poisonStacks[c.id];
-                    const hasPoisonStacks = authoritativeCreatureEffects === undefined && creaturePoisonStacks && Date.now() < creaturePoisonStacks.expiresAt && creaturePoisonStacks.stacks > 0;
-                    const creatureIgniteStacks = igniteStacks[c.id];
-                    const hasIgniteStacks = authoritativeCreatureEffects === undefined && creatureIgniteStacks && Date.now() < creatureIgniteStacks.expiresAt && creatureIgniteStacks.stacks > 0;
-                     const creatureSunder = sunderDebuff?.[c.id];
-                     const isSundered = authoritativeCreatureEffects === undefined && creatureSunder && Date.now() < creatureSunder.expiresAt;
-                    const creatureBleed = bleedStacks[c.id];
-                    const isBleeding = authoritativeCreatureEffects === undefined && creatureBleed && Date.now() < creatureBleed.expiresAt;
-                    const isFlashing = flashingIds.has(c.id);
-                    const authoritativeTelegraph = authoritativeTelegraphs?.[
-                      combat2CreatureLifeKey(c.id, c.spawn_seq ?? 0)
-                    ];
-                    const isCurrentCharacterTank = authoritativeTankByCreatureLife?.[
-                      combat2CreatureLifeKey(c.id, c.spawn_seq ?? 0)
-                    ] === true;
-                    const activeCast = authoritativeTelegraphs === undefined ? bossCasts[c.id] : undefined;
-                    const hasActiveCast = !!activeCast || !!authoritativeTelegraph;
-                    return (
-                      <div
-                        key={c.id}
-                        onClick={() => { if (c.is_alive !== false && onSelectTarget) onSelectTarget(c.id); }}
-                        role={onSelectTarget ? 'button' : undefined}
-                        tabIndex={onSelectTarget ? 0 : undefined}
-                        onKeyDown={(e) => {
-                          if (!onSelectTarget) return;
-                          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectTarget(c.id); }
-                        }}
-                        title={onSelectTarget ? `Click to target ${c.name}` : undefined}
-                        className={`p-1.5 bg-background/50 rounded border animate-polish-fade-in cursor-pointer hover:border-primary/40 hover:bg-background/70 transition-colors ${isFlashing ? 'animate-aggro-flash' : ''} ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : isSelected ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border'}`}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          {/* Left: Name, level, debuffs */}
-                          <span className={`text-xs font-display truncate ${
-                            c.rarity === 'boss' ? 'text-primary text-glow' :
-                            c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'
-                          }`}>{c.name}</span>
-                          {c.is_aggressive && <span className="text-[10px] text-destructive" title="Aggressive"> </span>}
-                          <span className="text-[10px] text-muted-foreground">L{c.level}</span>
-                          {isCurrentCharacterTank && (
-                            <span className="text-[9px] text-chart-2 font-display" title="Authoritative Combat2 tank">Tanking</span>
-                          )}
-                          {hasPoisonStacks && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="text-[10px] text-elvish font-display animate-pulse">
-×{creaturePoisonStacks!.stacks}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-xs">
-                                Poison: {creaturePoisonStacks!.stacks} stack{creaturePoisonStacks!.stacks > 1 ? 's' : ''} — {creaturePoisonStacks!.stacks * creaturePoisonStacks!.damagePerTick} dmg/tick
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          {hasIgniteStacks && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="text-[10px] text-dwarvish font-display animate-flicker">
-×{creatureIgniteStacks!.stacks}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-xs">
-                                Burn: {creatureIgniteStacks!.stacks} stack{creatureIgniteStacks!.stacks > 1 ? 's' : ''} — {creatureIgniteStacks!.stacks * creatureIgniteStacks!.damagePerTick} dmg/tick
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          {isBleeding && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="text-[10px] text-dot-bleed font-display animate-drip">
-
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-xs">
-                                Rend: {creatureBleed!.damagePerTick} dmg/tick
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          {isSundered && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="text-[10px] text-dwarvish font-display">
-
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-xs">
-                                Sundered: AC reduced by {creatureSunder!.acReduction}
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          {authoritativeCreatureEffects === undefined && rootDebuff && rootDebuff.creatureId === c.id && Date.now() < rootDebuff.expiresAt && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="text-[10px] text-elvish font-display animate-pulse">
-
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-xs">
-                                Snared: damage reduced by {Math.round(rootDebuff.damageReduction * 100)}%
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          {authoritativeCreatureEffects !== undefined && (
-                            <Combat2EffectPills effects={authoritativeCreatureEffects[c.id] ?? []} />
-                          )}
-                          {authoritativeTelegraph && (
-                            <Combat2TelegraphIndicator
-                              telegraph={authoritativeTelegraph}
-                              encounterTick={authoritativeEncounterTick}
-                            />
-                          )}
-                          {/* Right: combat icon, HP bar, HP numbers, attack button */}
-                          <div className="ml-auto flex items-center gap-1 shrink-0">
-                            {(isActiveTarget || isEngaged) && (
-                              <span className={`text-[10px] ${isActiveTarget ? 'text-destructive' : 'text-dwarvish'}`}> </span>
-                            )}
-                            {isSelected && (
-                              <span className="text-[10px] text-primary">{authoritativeTargetSelection ? 'Selected target' : ' '}</span>
-                            )}
-                            <div className="flex flex-col items-stretch gap-[2px] w-[120px]">
-                              <div
-                                className={`w-[120px] h-2 bg-background rounded-full overflow-hidden border ${
-                                  hasActiveCast
-                                    ? 'border-destructive ring-2 ring-destructive/70 shadow-[0_0_10px_hsl(var(--destructive)/0.7)] animate-pulse'
-                                    : 'border-border'
-                                }`}
-                              >
-                                <div
-                                  className="h-full rounded-full transition-[width] duration-300 transition-colors duration-700"
-                                  style={{
-                                    width: hpReady ? `${hpPct}%` : '0%',
-                                    backgroundColor: isBleeding
-                                      ? 'hsl(var(--dot-bleed))'
-                                      : hasIgniteStacks
-                                      ? 'hsl(var(--dwarvish))'
-                                      : hasPoisonStacks
-                                      ? 'hsl(var(--elvish))'
-                                      : hpPct > 50 ? 'hsl(var(--elvish))' : hpPct > 25 ? 'hsl(var(--dwarvish))' : 'hsl(var(--destructive))',
-                                  }}
-                                />
-                              </div>
-                              {/* Stored Power track — always mounted for bosses to reserve
-                                  its 4px slot and prevent layout shift. Fill only paints
-                                  while a cast is active; scale is frozen at cast start. */}
-                              {c.rarity === 'boss' && (
-                                <div
-                                  className="w-[120px] h-[4px] rounded-sm bg-background/60 overflow-hidden border border-border/40"
-                                  aria-hidden={!activeCast}
-                                >
-                                  {activeCast && activeCast.visualMax > 0 && (
-                                    <div
-                                      className="h-full rounded-sm transition-[width] duration-500 ease-out"
-                                      style={{
-                                        width: `${Math.max(0, Math.min(100, (activeCast.storedPower / Math.max(1, activeCast.visualMax)) * 100))}%`,
-                                        backgroundColor: 'hsl(var(--destructive))',
-                                        opacity: 0.85,
-                                      }}
-                                    />
-                                  )}
-                                </div>
-                              )}
-                            </div>
-
-                            <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{hpReady ? `${displayHp}/${c.max_hp}` : <span role="status" aria-label={`Loading HP for ${c.name}`} className="animate-pulse">HP…</span>}</span>
-                            {shouldShowAttackControl({
-                              authoritative: authoritativeTargetSelection,
-                              living: displayHp > 0,
-                              engaged: isEngaged,
-                              pending: pendingBasicAttackTargetId === c.id,
-                              legacyAvailable: !isActiveTarget && !isEngaged && !isSelected,
-                            }) && (
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                disabled={!rosterActionable}
-                                title={rosterActionable ? undefined : 'Confirming who stands here...'}
-                                onClick={(e) => { e.stopPropagation(); if (!rosterActionable) return; onAttack(c.id); }}
-                                className="font-display text-[10px] h-5 px-1.5"
-                              >
-                                Attack
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                    flashingIds={flashingIds} onSelectTarget={onSelectTarget} onAttack={onAttack} />}
                   {[...npcs].sort((a, b) => {
                     const order: Record<string, number> = { recruiter: 0, heraldry: 1, trainer: 2, vendor: 3, blacksmith: 4, jewelcrafter: 5 };
                     const ao = a.service_role ? order[a.service_role] ?? 90 : 99;

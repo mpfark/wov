@@ -24,3 +24,5 @@ Plan: .lovable/plan/wov-classic-architectural-modernization-plan-2026-11-09.md
 - [x] Phase 3a bounded player/live fight acceptance: 0033 repairs enrolled admin reset/relocation; authenticated tester enters engine screen, automatic fight ends after six rounds with death. Tester restored16/16HP at staging; world asleep/maintenance, scheduler off. Classless tester does not verify class-ability loadout gameplay.
 - [x] Phase 3b source/admin acceptance: engine-owned creature targeting and spellbook, unified admin entry points and mobile ability editing; 132 tests pass, authenticated desktop/mobile admin navigation verified without saving configuration. Build OK; player live acceptance remains the Phase 3a blocker above, not claimed.
 - [x] Engine integration: guarded arena-admin recovery installed, player entry repaired and tested, isolated full fight completed, tester and safe world controls restored. 140 source tests plus eight native trigger cases pass; publication remains Mik's.
+
+- [ ] ENG-MODERNIZE-005: retire alternative combat presentation everywhere; verify engine controls and a full ordinary-world fight; restore safe world state, no automatic publication.
