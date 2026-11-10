@@ -7,13 +7,13 @@
  * the authoritative wall clock) and never calls `Math.random()`.
  */
 
-import { getCreatureXp, getXpPenalty } from '../formulas/xp';
-import { getChaGoldMultiplier } from '../formulas/economy';
-import { getPartyXpBonus } from '../combat/pure/party-xp';
-import { getCreatureDamageDie, getCreatureAttackBonus, CREATURE_CRIT_MULT, HIT_QUALITY_MULT, getEffectiveAC, type WeaponProgressionConfig } from '../formulas/combat';
-import { getStatModifier } from '../formulas/stats';
-import { effectiveItemStats } from '../formulas/items';
-import { getCpRegen, getEffectiveMaxCp, getEffectiveMaxHp, getEffectiveMaxMp, getMilestoneCpRegen } from '../formulas/resources';
+import { getCreatureXp, getXpPenalty } from './rules/xp';
+import { getChaGoldMultiplier } from './rules/economy';
+import { getPartyXpBonus } from './rules/party-xp';
+import { getCreatureDamageDie, getCreatureAttackBonus, CREATURE_CRIT_MULT, HIT_QUALITY_MULT, getEffectiveAC, type WeaponProgressionConfig } from './rules/combat';
+import { getStatModifier } from './rules/stats';
+import { effectiveItemStats } from './rules/items';
+import { getCpRegen, getEffectiveMaxCp, getEffectiveMaxHp, getEffectiveMaxMp, getMilestoneCpRegen } from './rules/resources';
 import { applyMitigationPipeline, readMitigationParams } from './mitigation';
 import { TickRandom } from './rng';
 import { ownedStackIdentity, sharedStatusIdentity } from './stack-identity';

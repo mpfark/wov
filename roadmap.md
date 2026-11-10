@@ -16,3 +16,4 @@ Plan: .lovable/plan/wov-classic-architectural-modernization-plan-2026-11-09.md
 - [x] Phase 2a: engine entry point `src/shared/combat2/engine.ts` (step / applyTick / advance); golden fights now run through it (2026-11-10). Worker copy generated, not deployed.
 - [x] Phase 2b: live workers switched to engine.step and deployed (2026-11-10); GET 405, unsigned POST 401.
 - [x] Live full-fight check (2026-11-10): Proving Ground arena, F10-Leader vs low creature, 7 rounds committed by new engine, encounter ended (character died, creature 80->71). World closed: maintenance, asleep, scheduler off.
+- [x] Phase 2c (2026-11-10): combat formulas moved into `src/shared/combat2/rules/`; old formula/Combat1 paths are re-export shims; workers import only engine files (+ status contract), enforced by edge-mirror test. Workers redeployed.

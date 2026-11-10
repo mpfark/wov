@@ -73,6 +73,14 @@ describe('pure resolver — static purity', () => {
         "src/shared/combat/pure/types.ts",
         "src/shared/combat/resolution.ts",
         "src/shared/combat/tick-rng.ts",
+        "src/shared/combat2/rules/classes.ts",
+        "src/shared/combat2/rules/combat.ts",
+        "src/shared/combat2/rules/economy.ts",
+        "src/shared/combat2/rules/party-xp.ts",
+        "src/shared/combat2/rules/resources.ts",
+        "src/shared/combat2/rules/stats.ts",
+        "src/shared/combat2/rules/tick-rng.ts",
+        "src/shared/combat2/rules/xp.ts",
         "src/shared/formulas/bond.ts",
         "src/shared/formulas/classes.ts",
         "src/shared/formulas/combat.ts",
@@ -102,8 +110,8 @@ describe('pure resolver — static purity', () => {
     // combat.ts:rollBlock and stats.ts:rollD20/rollDamage are the only
     // survivors, and pure/ never imports them (asserted below).
     expect([...new Set(offenders)].sort()).toEqual([
-      'src/shared/formulas/combat.ts',
-      'src/shared/formulas/stats.ts',
+      'src/shared/combat2/rules/combat.ts',
+      'src/shared/combat2/rules/stats.ts',
     ]);
   });
 

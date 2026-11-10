@@ -19,8 +19,8 @@
  * exist for the resolver, so they can never resolve to invented numbers.
  */
 
-import { validateCalc, type AbilityCalc } from '../formulas/ability-calc';
-import { isAccuracyStat, type AccuracyStat } from '../formulas/combat';
+import { validateCalc, type AbilityCalc } from './rules/ability-calc';
+import { isAccuracyStat, type AccuracyStat } from './rules/combat';
 import { isMechanicKey, type MechanicKey } from './types';
 import type { AbilitySpec, AbilityActivation, AbilityStatusSpec, AbilityTargetType } from './mechanics';
 import { combat2AbilitySupport } from './ability-support';
