@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import EngineAdminWorkspace from './EngineAdminWorkspace';
 
 vi.mock('@/components/admin/Combat2TestArenaPanel', () => ({ default: () => <div data-testid="arena" /> }));
@@ -8,6 +8,14 @@ vi.mock('@/components/admin/StatusManager', () => ({ default: () => <div data-te
 vi.mock('@/components/admin/ClassConfigManager', () => ({ default: () => <div data-testid="classes" /> }));
 
 describe('engine admin workspace navigation', () => {
+  it('opens each existing authoring entry point without mounting arena controls', () => {
+    for (const initialTab of ['abilities', 'statuses', 'classes'] as const) {
+      render(<EngineAdminWorkspace initialTab={initialTab} />);
+      expect(screen.queryByTestId(initialTab)).not.toBeNull();
+      expect(screen.queryByTestId('arena')).toBeNull();
+      cleanup();
+    }
+  });
   it('mounts only the selected existing tool rather than competing background controllers', () => {
     render(<EngineAdminWorkspace />);
     expect(screen.queryByTestId('arena')).not.toBeNull();

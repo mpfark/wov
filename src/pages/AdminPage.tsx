@@ -10,9 +10,6 @@ import ItemManager from '@/components/admin/ItemManager';
 import CreatureManager from '@/components/admin/CreatureManager';
 import UserManager from '@/components/admin/users/UserManager';
 import RaceManager from '@/components/admin/RaceManager';
-import AbilityConfigManager from '@/components/admin/AbilityConfigManager';
-import StatusManager from '@/components/admin/StatusManager';
-import ClassConfigManager from '@/components/admin/ClassConfigManager';
 import RoadmapManager from '@/components/admin/RoadmapManager';
 import NPCManager from '@/components/admin/NPCManager';
 import LootTableManager from '@/components/admin/LootTableManager';
@@ -35,7 +32,6 @@ import AreaTypeDialog from '@/components/admin/AreaTypeDialog';
 import BatchNodeEditPanel from '@/components/admin/BatchNodeEditPanel';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminDashboard from '@/components/admin/AdminDashboard';
-import Combat2TestArenaPanel from '@/components/admin/Combat2TestArenaPanel';
 import EngineAdminWorkspace from '@/features/combat2/ui/EngineAdminWorkspace';
 
 interface AdminPageProps {
@@ -380,11 +376,11 @@ export default function AdminPage({ isValar }: AdminPageProps) {
       case 'races':
         return <RaceManager />;
       case 'abilities':
-        return <AbilityConfigManager />;
+        return <EngineAdminWorkspace key="abilities" initialTab="abilities" />;
       case 'statuses':
-        return <StatusManager />;
+        return <EngineAdminWorkspace key="statuses" initialTab="statuses" />;
       case 'class-config':
-        return <ClassConfigManager />;
+        return <EngineAdminWorkspace key="classes" initialTab="classes" />;
       case 'xp-boost':
         return (
           <div className="p-6">
@@ -394,9 +390,9 @@ export default function AdminPage({ isValar }: AdminPageProps) {
       case 'users':
         return <UserManager isValar={isValar} />;
       case 'combat2-test-arena':
-        return <Combat2TestArenaPanel />;
+        return <EngineAdminWorkspace key="arena" initialTab="arena" />;
       case 'engine':
-        return <EngineAdminWorkspace />;
+        return <EngineAdminWorkspace key="engine" />;
       case 'issues':
         return <IssueReportManager />;
       case 'marketplace':
