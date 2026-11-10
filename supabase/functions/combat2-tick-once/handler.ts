@@ -1,5 +1,5 @@
-import type { AuthoredAbilityRecord } from "../_shared/combat2/catalog.ts";
-import type { AppliedStatusRow } from "../_shared/config/status-contract.ts";
+import type { AuthoredAbilityRecord } from "../_shared/combat2/engine.ts";
+import type { AppliedStatusRow } from "../_shared/combat2/engine.ts";
 import type {
   CommitTickArgs,
   NodeTickRunResult,

@@ -10,6 +10,14 @@ Current E/F rollout (2026-10-22): owner and published Lovable reports confirm 00
 
 ## Now — engine stabilization
 
+### ENG-MODERNIZE-002 — Engine-owned combat worker rules
+
+- **Engine area / status:** combat worker consolidation; `implemented_source`.
+- **Outcome:** authored status contract and player/boss catalog preparation join the canonical engine; worker transport imports the engine entry point, with no external combat-policy dependency in the full deployment graph.
+- **Verification:** recorded fights, catalog refusal preservation, worker claim/commit tests and exact generated-module parity; operational deployment evidence belongs in project state.
+- **Preserved / remaining:** no balance, heartbeat, SQL, progression/lifecycle authority, configuration or frontend change. Database rule migration and the generic command pipeline remain later phases; this does not close them.
+- **Specification sections:** Engine principles and authority; Combat resolution; Effects and stances. All rules preserved.
+
 Owner-approved bounded test support: [WOV-IDEA-025 scoped test teleport candidate](../operations/idea-025-test-teleport-handoff.md), `implemented_source`, review branch only. Existing gameplay login and private UUID approvals; no general teleport unlock, progression-control change or hosted activation. SQL/parity/enrollment → matching admin-users → Mik manual Publish remain separate gates. This reuses025/ADM-015 and does not replace the execution sequence or close material-grant acceptance.
 
 ### ENG-COMBAT-HIT-001 — Creature grazing hits

@@ -2,12 +2,20 @@
  * WoV engine entry point (modernization phase 2).
  *
  * One pure function family: `(state, commands) -> (proposal, nextState)`.
- * Rules live in the Combat2 resolver; this module adds the commit fold so a
- * whole fight can run in TypeScript without the database. Workers switch by
- * calling `step` instead of `resolveNodeTick`; behaviour is identical and
- * guarded by the golden master.
+ * Owns authored player/status and boss preparation, resolution and the commit
+ * fold. Workers only transport claims and proposals; no combat policy lives
+ * in the transport layer. Behaviour is guarded by recorded-fight tests.
  */
 import { resolveNodeTick, type ResolveDeps } from './resolver';
+import { buildAbilityCatalog, type AuthoredAbilityRecord, type CatalogRejection } from './catalog';
+import { adaptClaimedBossCatalog, type BossCastRejection } from './boss-catalog';
+import type { AppliedStatusRow } from './status-contract';
+export { decodeClaim } from './decode';
+export type { ClaimDecodeResult } from './decode';
+export type { AuthoredAbilityRecord, CatalogRejection } from './catalog';
+export type { BossCastRejection } from './boss-catalog';
+export type { AppliedStatusRow } from './status-contract';
+export type { ProposedTick } from './types';
 import type { NodeSnapshot, ProposedTick, SnapshotEffect } from './types';
 
 export const ENGINE_VERSION = 'wov-engine-1';
@@ -24,6 +32,25 @@ export interface StepResult {
 /** Resolve one 2-second round. Pure: never mutates `state`. */
 export function step(state: EngineState, deps: EngineDeps): ProposedTick {
   return resolveNodeTick(state, deps);
+}
+
+/** Prepare all authored rules inside the engine before resolving a claimed round. */
+export function prepareTick(
+  state: EngineState,
+  abilityRecords: readonly AuthoredAbilityRecord[],
+  statusRecords?: readonly AppliedStatusRow[],
+): { ok: true; state: EngineState; deps: EngineDeps }
+  | { ok: false; kind: 'player_catalog_rejected'; rejected: readonly CatalogRejection[] }
+  | { ok: false; kind: 'boss_catalog_rejected'; rejected: BossCastRejection[] } {
+  const abilities = buildAbilityCatalog(abilityRecords, statusRecords);
+  if (abilities.rejected.length > 0) {
+    return { ok: false, kind: 'player_catalog_rejected', rejected: abilities.rejected };
+  }
+  const bosses = adaptClaimedBossCatalog(state);
+  if (bosses.rejected.length > 0) {
+    return { ok: false, kind: 'boss_catalog_rejected', rejected: bosses.rejected };
+  }
+  return { ok: true, state: bosses.snapshot, deps: { abilities: abilities.specs } };
 }
 
 /** Fold a proposal into the next state, as the atomic commit persists it. */

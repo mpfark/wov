@@ -73,7 +73,9 @@ describe("combat2 Edge packaging", () => {
     const visited = new Set<string>();
 
     while (pending.length > 0) {
-      const current = resolve(pending.pop()!);
+      const entry = pending.pop();
+      if (!entry) continue;
+      const current = resolve(entry);
       if (visited.has(current)) continue;
       visited.add(current);
 
@@ -89,6 +91,11 @@ describe("combat2 Edge packaging", () => {
         const dependency = resolve(dirname(current), specifier);
         expect(dependency === FUNCTIONS || dependency.startsWith(`${FUNCTIONS}${sep}`), specifier).toBe(true);
         expect(existsSync(dependency), `${relative(ROOT, current)} imports missing ${specifier}`).toBe(true);
+        const allowedInfrastructure = resolve(FUNCTIONS, '_shared/combat2-internal-edge-auth.ts');
+        const inEngine = dependency.startsWith(`${COMBAT2_DST}${sep}`);
+        const inHandler = ENTRIES.some(entry => dirname(entry) === dirname(dependency));
+        expect(inEngine || inHandler || dependency === allowedInfrastructure,
+          `non-engine dependency: ${relative(ROOT, current)} -> ${specifier}`).toBe(true);
         pending.push(dependency);
       }
     }

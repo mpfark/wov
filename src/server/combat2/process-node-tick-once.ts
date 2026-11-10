@@ -1,14 +1,8 @@
 /** Server-only, single-claim/single-resolution/single-commit orchestration. */
-import * as bossCatalog from '../../shared/combat2/boss-catalog.ts';
-import * as playerCatalog from '../../shared/combat2/catalog.ts';
-import { decodeClaim } from '../../shared/combat2/decode.ts';
-import type { ClaimDecodeResult } from '../../shared/combat2/decode.ts';
-import * as resolver from '../../shared/combat2/resolver.ts';
 import * as engine from '../../shared/combat2/engine.ts';
-import type { AuthoredAbilityRecord, CatalogRejection } from '../../shared/combat2/catalog.ts';
-import type { BossCastRejection } from '../../shared/combat2/boss-catalog.ts';
-import type { ProposedTick } from '../../shared/combat2/types.ts';
-import type { AppliedStatusRow } from '../../shared/config/status-contract.ts';
+import { decodeClaim, type ClaimDecodeResult, type AuthoredAbilityRecord,
+  type CatalogRejection, type BossCastRejection, type ProposedTick,
+  type AppliedStatusRow } from '../../shared/combat2/engine.ts';
 
 export interface CommitTickArgs {
   _encounter_id: string;
@@ -30,7 +24,7 @@ export interface ProcessNodeTickDependencies {
   abilityRecords: readonly AuthoredAbilityRecord[];
   statusRecords?: readonly AppliedStatusRow[];
   /** Test seam for the pure resolver; production callers omit it. */
-  resolve?: typeof resolver.resolveNodeTick;
+  resolve?: typeof engine.step;
   /** Optional bounded diagnostic sink. It must never throw or affect gameplay. */
   diagnostic?: (event: { event: 'claim_attempted'|'claim_acquired'|'decode_completed'|'resolve_completed'|'commit_attempted'|'commit_completed';
     nodeId: string; encounterId?: string; tick?: number; elapsedMs: number; outcome?: string }) => void;
@@ -168,6 +162,7 @@ export async function processNodeTickOnce(
   if (decoded.snapshot.boss_configurations === undefined) {
     return { ok: false, kind: 'snapshot_rejected', errors: ['snapshot.boss_configurations: required by worker'] };
   }
+  if (!decoded.claimToken) return { ok: false, kind: 'malformed_claim', diagnostic: 'claim token is missing' };
   const encounterId = claim.encounter_id;
   if (typeof encounterId !== 'string' || encounterId !== decoded.snapshot.encounter.id ||
       claim.candidate_tick !== decoded.snapshot.encounter.candidate_tick ||
@@ -178,18 +173,12 @@ export async function processNodeTickOnce(
   const decodedAt=performance.now();
   note({event:'decode_completed',nodeId,encounterId,tick:decoded.snapshot.encounter.candidate_tick,elapsedMs:decodedAt-claimAt});
 
-  const abilities = playerCatalog.buildAbilityCatalog(dependencies.abilityRecords, dependencies.statusRecords);
-  if (abilities.rejected.length > 0) {
-    return { ok: false, kind: 'player_catalog_rejected', rejected: abilities.rejected };
-  }
-  const bosses = bossCatalog.adaptClaimedBossCatalog(decoded.snapshot);
-  if (bosses.rejected.length > 0) {
-    return { ok: false, kind: 'boss_catalog_rejected', rejected: bosses.rejected };
-  }
+  const prepared = engine.prepareTick(decoded.snapshot, dependencies.abilityRecords, dependencies.statusRecords);
+  if (prepared.ok === false) return prepared;
 
   let proposal: ProposedTick;
   try {
-    proposal = (dependencies.resolve ?? engine.step)(bosses.snapshot, { abilities: abilities.specs });
+    proposal = (dependencies.resolve ?? engine.step)(prepared.state, prepared.deps);
   } catch (error) {
     return { ok: false, kind: 'resolver_failed', diagnostic: safeError(error) };
   }
@@ -199,7 +188,7 @@ export async function processNodeTickOnce(
   let commitRaw: unknown;
   const commitArgs: CommitTickArgs = {
     _encounter_id: encounterId,
-    _claim_token: decoded.claimToken!,
+    _claim_token: decoded.claimToken,
     _candidate_tick: decoded.snapshot.encounter.candidate_tick,
     _expected_last_tick: decoded.snapshot.encounter.tick,
     _expected_state_version: decoded.snapshot.encounter.state_version,
