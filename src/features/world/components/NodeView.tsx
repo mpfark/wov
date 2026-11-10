@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import StatusBarsStrip, { StatusBarsStripProps } from '@/features/character/components/StatusBarsStrip';
+import HeartbeatIndicator from '@/components/game/HeartbeatIndicator';
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';

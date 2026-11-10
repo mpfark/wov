@@ -1676,38 +1676,26 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
               onAttack={handleSelectedBasicAttack}
               onSelectTarget={(id) => setSelectedTargetId(id)}
               onTalkToNPC={handleTalkToNPC}
-              inCombat={inCombat}
-              lastTickTime={lastTickTime}
-               activeCombatCreatureId={activeCombatCreatureId}
+              inCombat={combat2.sessionStatus === 'active'}
+              lastTickTime={combat2.lastCommitAt}
+               activeCombatCreatureId={combat2Targets.selectedCreatureId}
                selectedTargetId={selectedTargetId}
               authoritativeTargetSelection={combat2BlocksLegacy}
               pendingBasicAttackTargetId={combat2.intents.pending?.action.kind === 'basic_attack'
                 ? combat2.intents.pending.action.targetCreatureId : null}
-               engagedCreatureIds={combat2BlocksLegacy
-                 ? activeCombat2Presentation?.creatures.filter(creature => creature.engaged).map(creature => creature.creatureId) ?? []
-                 : engagedCreatureIds}
-              creatureHpOverrides={presentedCreatureHp ?? mergedCreatureHpOverrides}
+               engagedCreatureIds={activeCombat2Presentation?.creatures.filter(creature => creature.engaged).map(creature => creature.creatureId) ?? []}
+              creatureHpOverrides={presentedCreatureHp ?? {}}
               authoritativeCreatureEffects={activeCombat2Presentation?.creatureEffects}
               classAbilities={CLASS_ABILITIES[character.class] || []}
-              abilityAvailableCp={combat2BlocksLegacy
-                ? Math.max(0, presentedCharacter.cp - authoritativeCombat2ReservedCp)
-                : undefined}
+              abilityAvailableCp={Math.max(0, presentedCharacter.cp - authoritativeCombat2ReservedCp)}
               onUseAbility={(idx, target) => void handlePlayerUseAbility(idx, target ?? selectedTargetId ?? undefined)}
-              combatActionsReady={!combat2BlocksLegacy || (combat2.actionsReady && !ownership.locked)}
-              getAbilityReadiness={combat2BlocksLegacy ? getCombat2AbilityReadiness : undefined}
+              combatActionsReady={combat2.actionsReady && !ownership.locked}
+              getAbilityReadiness={getCombat2AbilityReadiness}
               abilityTargetId={abilityTargetId}
-              pendingAbilityIndex={pendingAbilityIndex ?? pendingAbility?.index ?? null}
+              pendingAbilityIndex={pendingAbilityIndex}
               pendingAbilityStage={pendingAbilityStage ?? null}
-              reservedBuffs={combat2BlocksLegacy
-                ? authoritativeCombat2Reservations
-                : (character as any).reserved_buffs ?? null}
+              reservedBuffs={authoritativeCombat2Reservations}
               actionBindings={keyboardMovement.actionBindings}
-              poisonStacks={poisonStacks}
-              igniteStacks={igniteStacks}
-              sunderDebuff={sunderDebuff}
-              rootDebuff={rootDebuff}
-              bleedStacks={bleedStacks}
-              bossCasts={bossCasts}
               authoritativeTelegraphs={activeCombat2Presentation?.telegraphsByCreatureLife}
               authoritativeEncounterTick={activeCombat2Presentation?.encounterTick}
               authoritativeTankByCreatureLife={activeCombat2Presentation ? Object.fromEntries(
