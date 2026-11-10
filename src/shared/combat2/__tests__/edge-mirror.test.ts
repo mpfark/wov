@@ -25,9 +25,8 @@ describe('workers run only the engine', () => {
     for (const file of files.filter(name => name.endsWith('.ts'))) {
       const text = readFileSync(`supabase/functions/_shared/combat2/${file}`, 'utf8');
       const outside = [...text.matchAll(/from\s+'([^']+)'/g)].map(m => m[1])
-        .filter(p => p.startsWith('../') && !(file.startsWith('rules/') && p.startsWith('./')));
-      const allowed = (p: string) => p === '../config/status-contract.ts' || (file.startsWith('rules/') && p.startsWith('../'))
-        && false;
+        .filter(p => p.startsWith('../'));
+      const allowed = (p: string) => p === '../config/status-contract.ts';
       expect(outside.filter(p => !allowed(p)), file).toEqual([]);
     }
   });
