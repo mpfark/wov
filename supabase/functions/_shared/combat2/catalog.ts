@@ -214,7 +214,12 @@ export function buildAbilitySpec(
     return reject('missing_interval');
   }
 
-  if (activation === 'stance' && !(record.cpReservePct && record.cpReservePct > 0)) {
+  const fixedReserve = config.cp_reserve_fixed;
+  if (fixedReserve !== undefined && (activation !== 'stance' || typeof fixedReserve !== 'number'
+      || !Number.isSafeInteger(fixedReserve) || fixedReserve <= 0 || (record.cpReservePct ?? 0) !== 0)) {
+    return reject('invalid_calc', 'fixed reservation requires a positive integer, stance and no percentage');
+  }
+  if (activation === 'stance' && fixedReserve === undefined && !(record.cpReservePct && record.cpReservePct > 0)) {
     return reject('missing_cp_reserve');
   }
 
@@ -269,6 +274,73 @@ export function buildAbilitySpec(
     };
   }
 
+  const grouping = config.stack_grouping;
+  const consumeOn = config.stack_consume_on;
+  if (grouping !== undefined && grouping !== 'caster_status' && grouping !== 'creature_status') {
+    return reject('invalid_calc', 'unknown stack_grouping');
+  }
+  if (consumeOn !== undefined && (consumeOn !== 'landed_hit' || mechanic !== 'stack_consume')) {
+    return reject('invalid_calc', 'stack_consume_on requires a stack finisher and landed_hit');
+  }
+  if (grouping === 'caster_status') {
+    if (mechanic === 'stack_consume') {
+      if (typeof config.stack_type !== 'string' || !config.stack_type) {
+        return reject('invalid_calc', 'shared owned finisher requires stack_type');
+      }
+    } else {
+      if (!appliedStatus || appliedStatus.classification !== 'dot' || appliedStatus.tickIntervalMs !== 2000
+          || !((mechanic === 'spell_attack' && appliedStatus.trigger === 'ability_hit')
+            || (mechanic === 'stack_apply' && activation === 'stance' && targetType === 'self'
+              && appliedStatus.trigger === 'successful_pulse_hit'))) {
+        return reject('invalid_calc', 'shared owned application requires a two-second DoT and matching trigger');
+      }
+      for (const name of ['stack_damage', 'stack_duration', 'max_stacks',
+        ...(mechanic === 'stack_apply' ? ['pulse_damage'] : [])]) {
+        if (!mechanicCalcs[name]) return reject('missing_mechanic_calc', name);
+      }
+    }
+  }
+  if (grouping === 'creature_status' && (mechanic !== 'spell_attack' || !appliedStatus
+      || appliedStatus.classification !== 'damage_amp' || appliedStatus.trigger !== 'ability_hit')) {
+    return reject('invalid_calc', 'shared creature application requires a landed spell damage_amp status');
+  }
+  const sharedStackType = config.shared_stack_type;
+  let sharedEffectType: string | undefined;
+  if (sharedStackType !== undefined) {
+    if (typeof sharedStackType !== 'string' || !sharedStackType || mechanic !== 'spell_attack'
+        || !mechanicCalcs.per_stack_multiplier || grouping !== undefined) {
+      return reject('invalid_calc', 'shared stack rider requires a spell, a status key and per_stack_multiplier');
+    }
+    const row = statusRows[sharedStackType];
+    if (!row) return reject('missing_status_definition', sharedStackType);
+    const problems = validateStatusDefinition(row, REQUIRED_STATUS_CONTRACTS.find(c => c.key === sharedStackType));
+    if (row.classification !== 'damage_amp' || problems.length) {
+      return reject('invalid_status_definition', problems.join('; ') || 'shared stack rider requires damage_amp');
+    }
+    sharedEffectType = row.effect_type!;
+  }
+  const contactDebuff = config.contact_debuff;
+  if (contactDebuff !== undefined && (typeof contactDebuff !== 'string' || !contactDebuff
+      || mechanic !== 'control_debuff' || activation !== 'stance' || targetType !== 'self'
+      || config.control_mode !== 'damage_reduction' || !durationCalc
+      || !['multiplier', 'percent'].includes(amountCalc?.unit ?? ''))) {
+    return reject('invalid_calc', 'contact debuff requires a self control stance, fractional magnitude and duration');
+  }
+
+  const extraCpMax = config.extra_cp_max;
+  const hasExtraContext = amountCalc?.terms.some(term => term.source === 'context' && term.contextKey === 'extra_cp');
+  if ((extraCpMax !== undefined && (typeof extraCpMax !== 'number' || !Number.isSafeInteger(extraCpMax)
+      || extraCpMax < 0 || mechanic !== 'spell_attack' || targetType !== 'enemy' || activation === 'stance' || !hasExtraContext))
+      || (hasExtraContext && extraCpMax === undefined)) {
+    return reject('invalid_calc', 'automatic extra CP requires a direct spell and extra_cp calculation context');
+  }
+  if (config.offense_mode === 'base_cp_discount' && (mechanic !== 'offense_buff'
+      || activation !== 'stance' || targetType !== 'self' || amountCalc?.unit !== 'count'
+      || typeof config.cp_discount_min !== 'number' || !Number.isSafeInteger(config.cp_discount_min)
+      || config.cp_discount_min < 0)) {
+    return reject('invalid_calc', 'base CP discount requires a self offense stance and integer minimum');
+  }
+
   const spec: AbilitySpec = {
     abilityKey: record.abilityKey,
     classKey: record.classKey,
@@ -283,6 +355,8 @@ export function buildAbilitySpec(
     scalingStat: readStat(config, 'stat') ?? readStat(config, 'magnitude_stat') ?? 'str',
     cpCost: Math.max(0, record.cpCost ?? 0),
     cpReservePct: record.cpReservePct ?? null,
+    ...(typeof fixedReserve === 'number' ? { cpReserveFixed: fixedReserve } : {}),
+    ...(typeof extraCpMax === 'number' ? { extraCpMax } : {}),
     amountCalc,
     durationCalc,
     mechanicCalcs,
@@ -292,6 +366,10 @@ export function buildAbilitySpec(
     requiresShield: readBool(config, 'requires_shield'),
     effectType: typeof config.effect_type === 'string' ? config.effect_type : null,
     stackType: typeof config.stack_type === 'string' ? config.stack_type : null,
+    ...(grouping === 'caster_status' || grouping === 'creature_status' ? { stackGrouping: grouping } : {}),
+    ...(consumeOn === 'landed_hit' ? { stackConsumeOn: consumeOn } : {}),
+    ...(sharedEffectType ? { sharedStackType: sharedEffectType } : {}),
+    ...(typeof contactDebuff === 'string' ? { contactDebuff } : {}),
     config,
     appliedStatus,
     support,

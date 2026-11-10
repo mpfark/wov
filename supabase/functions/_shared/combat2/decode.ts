@@ -10,6 +10,8 @@
  * weapon metadata or resources.
  */
 
+import { ownedStackIdentity, sharedStatusIdentity } from './stack-identity.ts';
+import { readCreatureEffectSource } from './effect-source.ts';
 import type {
   NodeSnapshot,
   SnapshotBossAbility,
@@ -282,10 +284,18 @@ function decodeEffect(r: Reader, path: string, raw: unknown): SnapshotEffect {
 
 function decodeCharacterStance(r: Reader, path: string, raw: unknown): NonNullable<NodeSnapshot['character_stances']>[number] {
   const o = r.object(path, raw);
+  let reservation: { mode: 'fixed'; amount: number } | undefined;
+  if (o.reservation !== undefined) {
+    const value = r.object(`${path}.reservation`, o.reservation);
+    if (value.mode !== 'fixed' || typeof value.amount !== 'number' || !Number.isSafeInteger(value.amount)
+        || value.amount <= 0 || o.reserve_pct !== 0) r.errors.push(`${path}.reservation: invalid fixed contract`);
+    else reservation = { mode: 'fixed', amount: value.amount };
+  }
   return {
     character_id: r.str(`${path}.character_id`, o.character_id),
     ability_key: r.str(`${path}.ability_key`, o.ability_key),
     reserve_pct: r.num(`${path}.reserve_pct`, o.reserve_pct),
+    ...(reservation ? { reservation } : {}),
     version: r.num(`${path}.version`, o.version),
     state: (o.state ?? {}) as Record<string, unknown>,
     activated_at: r.str(`${path}.activated_at`, o.activated_at),
@@ -615,9 +625,45 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
   }
   const stackIdentities = new Set<string>();
   const presenceIdentities = new Set<string>();
+  const sharedIdentities = new Set<string>();
   for (const [i, effect] of snapshot.effects.entries()) {
+    if (readCreatureEffectSource(effect).kind === 'invalid') {
+      r.errors.push(`snapshot.effects[${i}].config.creature_source: invalid or conflicting source identity`);
+    }
+    if (effect.kind === 'offense' && effect.config.offense_mode === 'base_cp_discount'
+        && (typeof effect.magnitude !== 'number' || !Number.isSafeInteger(effect.magnitude) || effect.magnitude < 0
+          || typeof effect.config.cp_discount_min !== 'number' || !Number.isSafeInteger(effect.config.cp_discount_min)
+          || effect.config.cp_discount_min < 0)) r.errors.push(`snapshot.effects[${i}]: invalid base CP discount`);
     if (effect.interval_ms !== null && !readCombat2TickTiming(effect.config)) {
       r.errors.push(`snapshot.effects[${i}]: periodic tick timing is malformed`);
+    }
+    if (effect.kind === 'contact_status') {
+      const fighter = snapshot.fighters.find(row => row.character_id === effect.target_character_id);
+      if (!fighter || effect.source_character_id !== fighter.character_id
+          || effect.config.target_fighter_id !== fighter.id || effect.config.target_entry_seq !== fighter.entry_seq
+          || typeof effect.config.contact_effect_type !== 'string' || !effect.config.contact_effect_type
+          || typeof effect.config.contact_duration_ms !== 'number' || !Number.isFinite(effect.config.contact_duration_ms)
+          || effect.config.contact_duration_ms <= 0 || effect.config.control_mode !== 'damage_reduction'
+          || !Number.isFinite(effect.magnitude) || effect.magnitude! <= 0 || effect.magnitude! > 1) {
+        r.errors.push(`snapshot.effects[${i}]: contact status policy is malformed or stale`);
+      }
+    }
+    if (effect.config.stack_grouping === 'creature_status') {
+      const creature = snapshot.creatures.find(row => row.id === effect.config.node_creature_id);
+      const max = effect.config.max_stacks;
+      if (!creature || creature.creature_id !== effect.target_creature_id
+          || creature.creature_id !== effect.config.creature_id || creature.spawn_seq !== effect.config.spawn_seq
+          || !['amplification', 'control'].includes(effect.kind)
+          || !Number.isSafeInteger(effect.stacks) || effect.stacks < 1
+          || typeof max !== 'number' || !Number.isSafeInteger(max) || max < 1 || effect.stacks > max
+          || !effect.expires_at || !readCombat2TickTiming(effect.config)
+          || effect.interval_ms !== null || effect.next_due_at !== null) {
+        r.errors.push(`snapshot.effects[${i}]: shared creature status is malformed or stale`);
+      }
+      const identity = sharedStatusIdentity(effect.config.node_creature_id, effect.config.spawn_seq, effect.effect_type);
+      if (sharedIdentities.has(identity)) r.errors.push(`snapshot.effects[${i}]: duplicate shared creature status`);
+      sharedIdentities.add(identity);
+      continue;
     }
     if (effect.config.presence_effect === true || effect.kind === 'party_regen' || effect.kind === 'aura') {
       const source = snapshot.fighters.find(row => row.character_id === effect.source_character_id);
@@ -662,7 +708,13 @@ export function decodeSnapshot(raw: unknown): DecodeResult {
       r.errors.push(`snapshot.effects[${i}]: stack identity is stale or malformed`);
       continue;
     }
-    const identity = `${creature.id}:${creature.spawn_seq}:${effect.effect_type}:${fighter.id}:${fighter.entry_seq}:${effect.ability_key}`;
+    if (effect.config.stack_grouping !== undefined && effect.config.stack_grouping !== 'caster_status') {
+      r.errors.push(`snapshot.effects[${i}]: unknown stack grouping`);
+    }
+    const identity = effect.config.stack_grouping === 'caster_status'
+      ? ownedStackIdentity(effect.source_character_id, creature.id, creature.spawn_seq, effect.effect_type,
+        fighter.id, fighter.entry_seq)
+      : `${creature.id}:${creature.spawn_seq}:${effect.effect_type}:${fighter.id}:${fighter.entry_seq}:${effect.ability_key}`;
     if (stackIdentities.has(identity)) r.errors.push(`snapshot.effects[${i}]: duplicate stack identity`);
     stackIdentities.add(identity);
   }
