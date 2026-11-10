@@ -10,5 +10,5 @@ Plan: .lovable/plan/wov-classic-architectural-modernization-plan-2026-11-09.md
 - [x] Phase 0c: static reachability map (docs/architecture/modernization-unreachable-files.md)
 - [ ] Phase 1d: golden scenarios for fixed-reservation stances, shared creature statuses, boss windups (the known mirror differences)
 - [x] Decide: deploy newer tested combat source to Edge — approved by Mik (2026-11-10)
-- [ ] Synchronize Combat2 mirror, run focused combat/worker tests, deploy only both Combat2 workers, record refusals and release evidence
+- [x] Synchronize Combat2 mirror, run focused combat/worker tests, deploy only both Combat2 workers, record refusals and release evidence (613 tests; live GET405/POST401)
 - [ ] Phases 2–8 per plan
