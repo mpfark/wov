@@ -5,10 +5,11 @@ import { buildAbilityCatalog } from '../catalog';
 import { adaptClaimedBossCatalog } from '../boss-catalog';
 import { resolveNodeTick } from '../resolver';
 import { CLAIM } from './roundtrip-contract.test';
+import type { NodeSnapshot } from '../types';
 
 const authored = inventory as { abilities: AuthoredAbilityRecord[]; statuses: AppliedStatusRow[] };
 function state() {
-  const snapshot = structuredClone(CLAIM.snapshot);
+  const snapshot = structuredClone(CLAIM.snapshot) as NodeSnapshot;
   snapshot.boss_configurations = snapshot.creatures.map(creature => ({
     encounter_id: snapshot.encounter.id, node_creature_id: creature.id,
     creature_id: creature.creature_id, spawn_seq: creature.spawn_seq, boss_cast: null,
@@ -34,9 +35,12 @@ describe('engine-owned authored preparation', () => {
     expect(out.ok).toBe(false);
     expect(out).toMatchObject({ kind: 'player_catalog_rejected' });
   });
-  it('keeps missing boss configuration as a boss catalog refusal', () => {
+  it('keeps malformed boss configuration as a boss catalog refusal', () => {
     const snapshot = state();
-    snapshot.boss_configurations = [];
+    const configuration = snapshot.boss_configurations?.[0];
+    if (!configuration) throw new Error('fixture requires a boss configuration');
+    configuration.boss_cast = { enabled: true, ability_key: 'bad', cast_ms: 2000,
+      base_amount: 10, target_mode: 'browser_selected' } as unknown as NonNullable<typeof configuration.boss_cast>;
     expect(prepareTick(snapshot, authored.abilities, authored.statuses)).toMatchObject({
       ok: false, kind: 'boss_catalog_rejected',
     });
