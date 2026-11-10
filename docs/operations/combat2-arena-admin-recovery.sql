@@ -6,7 +6,7 @@ BEGIN
     RAISE EXCEPTION 'arena location guard drift';
   END IF;
   IF md5(pg_get_functiondef('public.combat2_test_admin_relocate(uuid,uuid,uuid)'::regprocedure)) <> 'd0fca59dd8f8478b63e49f1b1d692eaa'
-    OR md5(pg_get_functiondef('public.combat2_test_reset_without_presence_gate(uuid,uuid,boolean)'::regprocedure)) <> '075092931ad4e478425829a79eb4d5fb' THEN
+    OR md5(pg_get_functiondef('public.combat2_test_reset_without_presence_gate(uuid,uuid,boolean)'::regprocedure)) <> '17067e70423ee3687388665725d2772c' THEN
     RAISE EXCEPTION 'arena admin caller drift';
   END IF;
 END $guard$;
