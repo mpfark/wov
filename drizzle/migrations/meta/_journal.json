@@ -225,6 +225,13 @@
       "when": 1794243849086,
       "tag": "0031_idea_025_test_teleport",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794347982582,
+      "tag": "0032_deprecate_unreachable_legacy_functions",
+      "breakpoints": true
     }
   ]
 }
