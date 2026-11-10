@@ -44,6 +44,8 @@ The Admin Roadmap currently reads and mutates `roadmap_items` directly in `src/c
 
 ## Engine principles and authority
 
+Combat worker TypeScript rules have one source owner: `src/shared/combat2`, including authored status validation, player/boss catalog preparation, deterministic resolution and formulas. Worker transport delegates preparation and resolution through `engine.ts`; external modules provide HTTP/authentication and database transport only. Compatibility re-exports preserve other consumers without adding a second rule owner. This structural consolidation preserves every gameplay rule, the one heartbeat and installed transactional authority; it does not claim SQL lifecycle/progression rules have been migrated into TypeScript.
+
 - Gameplay is server-authoritative. Clients submit intentions and render authoritative results.
 - Browsers never author persistent HP, CP, MP, position, damage, rewards or effects.
 - Resolution is deterministic from a claimed snapshot. Durable request IDs, idempotency, atomic commits and stale-state fences prevent duplicate damage, costs, movement, rewards and effects.
