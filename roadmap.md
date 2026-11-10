@@ -20,5 +20,5 @@ Plan: .lovable/plan/wov-classic-architectural-modernization-plan-2026-11-09.md
 
 - [x] Phase 2d: move authored status rules and catalog preparation into the engine; enforce complete worker dependency isolation, test, deploy both workers and record evidence (Mik 2026-11-10).
 - [x] Phase 3a source: engine-owned player action bar, ability/stance presentation registry, admin engine workspace and live-session inspector; server authority preserved, 211 tests pass, build OK. No SQL/Edge release or frontend publication.
-- [ ] Phase 3a hosted acceptance: admin/player screen checks and Mik's manual publication; blocked on requester preview session returning “Admin access required.” No role bypass/change authorized.
-- [ ] Mik authorized 2026-11-10: grant his verified account admin access, verify engine screens, run a full live arena fight and close the test environment; publication stays manual.
+- [x] Phase 3a admin acceptance: Mik's verified account granted Steward; authenticated engine workspace and configured ability screen opened. Manual publication remains Mik's action.
+- [ ] Phase 3a player/live fight acceptance: blocked by arena reset refusing tester_restore/P0001; installed location guard rejects other-account tester relocation even through admin reset. Narrow reviewed repair needs scoped authorization; no ownership bypass or raw revive performed. World stays asleep/maintenance/scheduler off.
