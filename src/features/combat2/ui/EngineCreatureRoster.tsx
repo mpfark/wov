@@ -10,6 +10,7 @@ import { shouldShowAttackControl } from '../attack-control';
 interface Props {
   creatures: readonly Creature[];
   rosterActionable: boolean;
+  playerAlive?: boolean;
   selectedTargetId?: string | null;
   activeTargetId?: string | null;
   engagedIds: readonly string[];
@@ -50,9 +51,9 @@ export function EngineCreatureRoster(props: Props) {
           </Button>
           <span className="shrink-0 pt-2 text-[10px] text-muted-foreground">L{creature.level}</span>
           {shouldShowAttackControl({ authoritative: true, living, engaged, pending, legacyAvailable: false }) &&
-            <Button size="sm" variant="destructive" disabled={!props.rosterActionable}
+            <Button size="sm" variant="destructive" disabled={!props.rosterActionable || props.playerAlive === false}
               title={props.rosterActionable ? undefined : 'Confirming who stands here…'}
-              onClick={() => { if (props.rosterActionable && living) props.onAttack(creature.id); }}
+              onClick={() => { if (props.rosterActionable && living && props.playerAlive !== false) props.onAttack(creature.id); }}
               className="h-8 shrink-0 gap-1 px-2 font-display text-[10px]"><Swords className="h-3 w-3" />Attack</Button>}
         </div>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px]">

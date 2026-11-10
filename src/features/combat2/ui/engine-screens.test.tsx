@@ -16,6 +16,11 @@ function roster(overrides: Partial<Parameters<typeof EngineCreatureRoster>[0]> =
   return { onAttack, onSelectTarget };
 }
 describe('engine creature commands', () => {
+  it('does not submit creature attacks when the player is dead', () => {
+    const commands = roster({ playerAlive: false });
+    fireEvent.click(screen.getByRole('button', { name: 'Attack' }));
+    expect(commands.onAttack).not.toHaveBeenCalled();
+  });
   it('separates target selection from the authoritative attack command', () => {
     const commands = roster();
     fireEvent.click(screen.getByRole('button', { name: 'Target Wolf' }));
