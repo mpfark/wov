@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-27T21:16:39Z",
+  "updated_at": "2026-11-10T21:36:46Z",
   "based_on_source_sha": "e1faa06b4fbf59d723636bde74af6abd503609a2",
   "status_vocabulary": [
     "authored",
@@ -795,6 +795,17 @@
       "directly_verified": true,
       "artifact": "docs/operations/combat2-persistent-aggression-handoff.md",
       "evidence": "Owner-authorized deployment of only combat2-dispatch-once and combat2-tick-once with shared resolver/types implementing the server-authoritative hostile_attempt proposal. HEAD e41af7bda validated descendant of reviewed commit 39d28bcccc936052fee4098d2f599e9f8145cbbb. Edge resolver SHA256 3099daeba7cf83122988391648ecbba02a1b5a3fcffc2e5e82ce8f10d35d6adf and types SHA256 4f9e87bee841d6d9e5ca910282670d36261076564efabb94fe6cd4a1a8319835 exactly match the reviewed handoff values; src/shared vs Edge mirror differences are only .ts import extensions. Installed private core node_tick_commit_without_bounded_failure normalized prosrc MD5 (whitespace-collapsed) equals d17163615c8ce101742c6bb698363a7d; raw prosrc MD5 d8f51f22e47930b0edbd01eb03713554 differs only by the previously recorded 0030 transcription whitespace drift. Submitted source SHA256 (files and settings): dispatch-once a5ffc143b26a5597d2be77cc6d1dcd859f85c29fedfe6e79d56c8370baf1148b, tick-once f3449c32561f90ef259a17d93edc2951aad219a2a084b1b616ccbe0373f58175. Non-mutating refusals: both functions GET405 and unauthenticated POST401; OPTIONS405 (these internal workers implement no CORS, consistent with server-to-server use; OPTIONS was not part of the prior G4A22 recorded refusal evidence). No platform revision ID returned, so live bundle identity is NOT independently verified; only deployment success confirmed. No SQL, ACL, history, secret, schedule, frontend or gameplay changes; no worker invocation. Feature remains inactive until separately authorized owner gameplay acceptance."
+    },
+    {
+      "identity": "combat2-dispatch-once, combat2-tick-once (tested engine synchronization)",
+      "status": "deployed",
+      "sha": "665360fb6d5cba91ce96452b1e54629b94a53696",
+      "timestamp": "2026-11-10T21:36:46Z",
+      "evidence_type": "cloud_inspection",
+      "reporting_actor": "Lovable; Mik explicit newer combat deployment approval",
+      "directly_verified": true,
+      "artifact": "docs/operations/combat2-tested-engine-deployment-2026-11-10.md",
+      "evidence": "Deployed only both Combat2 workers after synchronizing eight Combat2 modules and the required ability-calc extra_cp allowlist from canonical tested source; imports rewritten only for Deno. 28 focused test files/613 tests passed, including both 46-case golden masters and exact 14-module mirror parity. Build OK. Existing production ability inventory unchanged and byte-identical; prepared Wizard policies remain authored opt-ins, no fixed-reservation/schema/config activation. Worker orchestration, RPC contracts, JWT config/secrets, SQL/history, world controls and frontend unchanged. Submitted bundle SHA256 dispatcher ef52d96db30d229fe0d7e7175d3dcf67e3eda20d9dd9e77b918f9e903189e1c3; tick f37b0b05b93d00b637ce2947adb5c98b83b05b38673dc415ffa135b552250617. Supported tool reports both successful; fresh live GET405 and explicit no-Authorization POST401 on both, before gameplay RPC execution. No authorized worker/gameplay invocation performed; end-to-end gameplay unverified. No revision ID or live bundle retrieval available: submitted identity is not independent live bundle proof. Starting HEAD and freshly observed origin/main both 1fb163583cdec9875ccacae9057d4cd7aacab119; project-state baseline ancestry passed. Later managed local commit recorded separately from remote push/publication; no stateful git operation used. No frontend Publish required for this worker-only synchronization."
     }
   ],
   "frontend_publication": {

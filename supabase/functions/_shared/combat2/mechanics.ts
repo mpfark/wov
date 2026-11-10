@@ -92,6 +92,10 @@ export interface AbilitySpec {
   cpCost: number;
   /** Fraction of max CP reserved while a stance is active. */
   cpReservePct: number | null;
+  /** Explicit authored fixed amount; never combined with a percentage. */
+  cpReserveFixed?: number;
+  /** Automatic extra spend above the effective base price, from working spendable CP. */
+  extraCpMax?: number;
   amountCalc: AbilityCalc | null;
   durationCalc: AbilityCalc | null;
   mechanicCalcs: Record<string, AbilityCalc>;
@@ -103,6 +107,14 @@ export interface AbilitySpec {
   requiresShield: boolean;
   effectType: string | null;
   stackType: string | null;
+  /** Explicit ownership of status stack groups; absent preserves existing semantics. */
+  stackGrouping?: 'caster_status' | 'creature_status';
+  /** Non-consuming direct-attack rider using the existing active_stacks calc context. */
+  sharedStackType?: string;
+  /** Opt-in landed direct-contact policy on an existing self control stance. */
+  contactDebuff?: string;
+  /** Absent retains the existing attempt-consumption policy. */
+  stackConsumeOn?: 'landed_hit';
   config: Record<string, unknown>;
   /** Strictly authored reusable status applied by this ability, when enabled. */
   appliedStatus: AbilityStatusSpec | null;
@@ -123,6 +135,8 @@ export interface MechanicContext {
   targetAbsorb?: number;
   /** Existing stacks of the relevant stack type on the target. */
   existingStacks?: number;
+  sharedStacks?: number;
+  extraCp?: number;
   /** Sum of authored damage amplification on the target. */
   amplification?: number;
   /** Sunder-style AC reduction on the creature. */
@@ -288,6 +302,20 @@ export function resolveMechanicCalc(
   const calc = spec.mechanicCalcs[name];
   if (!calc) return null;
   return evaluateCalc(calc, calcInputs(ctx, spec, `mechanic:${name}`, weaponDie, context));
+}
+
+/** Evaluated only for the explicitly authored shared-owned-status contract. */
+export function resolveOwnedStackConfig(ctx: MechanicContext, spec: AbilitySpec): Record<string, unknown> {
+  return {
+    stack_grouping: spec.stackGrouping,
+    stack_effect_type: spec.appliedStatus!.effectType,
+    stack_duration_ms: Math.max(COMBAT2_TICK_MS, Math.floor(resolveMechanicCalc(ctx, spec, 'stack_duration')!)),
+    stack_interval_ms: COMBAT2_TICK_MS,
+    dot_per_tick: Math.max(0, Math.floor(resolveMechanicCalc(ctx, spec, 'stack_damage')!)),
+    max_stacks: Math.max(1, Math.floor(resolveMechanicCalc(ctx, spec, 'max_stacks')!)),
+    damage_type: spec.appliedStatus!.damageType,
+    stack_noun: spec.appliedStatus!.stackNoun,
+  };
 }
 
 /** Weapon die for this actor + spec, or a rejection when the contract is short. */
@@ -647,7 +675,16 @@ export type MechanicHandler = (ctx: MechanicContext, spec: AbilitySpec) => Mecha
 export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
   weapon_attack: (ctx, spec) => offensiveHit(ctx, spec, 'weapon_attack'),
 
-  spell_attack: (ctx, spec) => offensiveHit(ctx, spec, 'spell_attack'),
+  spell_attack: (ctx, spec) => {
+    if (!spec.sharedStackType && spec.extraCpMax === undefined) return offensiveHit(ctx, spec, 'spell_attack');
+    const stacks = Math.max(0, ctx.sharedStacks ?? 0);
+    return offensiveHit(ctx, spec, 'spell_attack', {
+      multiplier: spec.sharedStackType
+        ? 1 + stacks * Math.max(0, resolveMechanicCalc(ctx, spec, 'per_stack_multiplier', { active_stacks: stacks }) ?? 0) : 1,
+      context: { ...(spec.sharedStackType ? { active_stacks: stacks } : {}),
+        ...(spec.extraCpMax !== undefined ? { extra_cp: ctx.extraCp ?? 0 } : {}) },
+    });
+  },
 
   multi_attack: (ctx, spec) => {
     const merged = emptyOutcome();
@@ -816,7 +853,13 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
     return outcome;
   },
 
-  control_debuff: (ctx, spec) => creatureDebuff(ctx, spec, 'control'),
+  control_debuff: (ctx, spec) => {
+    if (!spec.contactDebuff) return creatureDebuff(ctx, spec, 'control');
+    const outcome = characterBuff(ctx, spec, 'contact_status');
+    for (const effect of outcome.effects) effect.config = { ...effect.config,
+      contact_effect_type: spec.contactDebuff, contact_duration_ms: resolveDurationMs(ctx, spec) };
+    return outcome;
+  },
 
   stack_apply: (ctx, spec) => {
     const outcome = emptyOutcome();
@@ -851,6 +894,10 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
         pulse_damage: pulseDamage,
         source_fighter_id: ctx.actor.id,
         source_entry_seq: ctx.actor.entry_seq,
+        ...(spec.stackGrouping === 'caster_status' ? {
+          ...resolveOwnedStackConfig(ctx, spec),
+          pulse_damage: Math.max(1, Math.floor(resolveMechanicCalc(ctx, spec, 'pulse_damage')!)),
+        } : {}),
       }));
       return outcome;
     }
@@ -902,9 +949,10 @@ export const MECHANIC_HANDLERS: Record<MechanicKey, MechanicHandler> = {
       multiplier: 1 + Math.max(0, perStack) * stacks,
       context: { consumed_stacks: stacks, active_stacks: stacks },
     });
-    outcome.meta_stacks_consumed = stacks;
+    const consumed = spec.stackConsumeOn === 'landed_hit' && (outcome.landedHits ?? 0) === 0 ? 0 : stacks;
+    outcome.meta_stacks_consumed = consumed;
     const attack = outcome.events.find(event => event.kind === 'attack');
-    if (attack) attack.meta = { ...(attack.meta ?? {}), stacksConsumed: stacks,
+    if (attack) attack.meta = { ...(attack.meta ?? {}), stacksConsumed: consumed,
       stackNoun: spec.config.stack_noun ?? 'stack' };
     return outcome;
   },
