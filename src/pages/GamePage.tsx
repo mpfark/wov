@@ -814,8 +814,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   const {
     isDead: legacyIsDead,
-    regenTick, deathCountdown, itemHpRegen, baseRegen,
-    inCombatRegenRef, deathGoldRef,
+    regenTick, itemHpRegen, baseRegen,
+    inCombatRegenRef,
   } = gameLoop;
   const isDead = combat2BlocksLegacy ? combat2.dead : legacyIsDead;
 
@@ -2074,18 +2074,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         worldContext={{ fromNode: currentNode, nodes, regions, areas, characterLevel: character.level }}
       />
 
-      {/* Death Overlay */}
-      {isDead && !combat2BlocksLegacy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-md animate-polish-fade-in">
-          <div className="text-center space-y-4">
-            <p className="font-display text-5xl text-destructive animate-pulse"> </p>
-            <p className="font-display text-2xl text-destructive">You Have Fallen</p>
-            <p className="font-display text-6xl text-destructive/80 tabular-nums">{deathCountdown}</p>
-            <p className="text-sm text-muted-foreground">Respawning at the starting area...</p>
-            <p className="text-xs text-muted-foreground">You lost {Math.floor(deathGoldRef.current * 0.1)} gold.</p>
-          </div>
-        </div>
-      )}
+      {/* Engine death/recovery screen */}
       {isDead && combat2BlocksLegacy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-md">
           <div className="text-center space-y-4 max-w-md">
