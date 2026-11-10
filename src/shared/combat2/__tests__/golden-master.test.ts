@@ -10,7 +10,7 @@ import inventory from '@/shared/combat/inventory/active-abilities.json';
 import { buildAbilityCatalog, type AuthoredAbilityInventory } from '../catalog';
 import { resolveNodeTick } from '../resolver';
 import type { NodeSnapshot, SnapshotFighter } from '../types';
-import { applyTick } from './golden-apply';
+import { advance } from '../engine';
 
 const authored = inventory as AuthoredAbilityInventory;
 const catalog = buildAbilityCatalog(authored.abilities, authored.statuses);
@@ -101,9 +101,9 @@ describe('golden master: combat2 resolver', () => {
     state.creatures[0].hp = state.creatures[0].max_hp = 2000;
     const rounds = [];
     for (let r = 0; r < 8; r++) {
-      const out = resolveNodeTick(state, deps);
+      const { proposal: out, next } = advance(state, deps, intentFor(r + 1));
       rounds.push({ round: r, events: out.events, effects_after: out.effects_insert.length });
-      state = applyTick(state, out, intentFor(r + 1));
+      state = next;
     }
     rounds.push({ final: { fighters: state.fighters.map(f => [f.character_id, f.hp, f.cp]),
       creature_hp: state.creatures[0].hp, effects: state.effects.map(e => [e.kind, e.effect_type, e.stacks, e.magnitude]) } });
