@@ -4,6 +4,7 @@ import { EngineCreatureRoster } from './EngineCreatureRoster';
 import { EngineSpellbook } from './EngineSpellbook';
 import type { Creature } from '@/features/creatures';
 import type { AbilityLoadoutState } from '@/hooks/useAbilityLoadout';
+import type { LoadoutOption } from './ability-loadout';
 
 const creature: Creature = { id: 'wolf', name: 'Wolf', description: '', node_id: 'node', rarity: 'regular', level: 1,
   hp: 20, max_hp: 20, stats: {}, ac: 10, is_aggressive: false, loot_table: [], is_alive: true,
@@ -39,7 +40,8 @@ describe('engine creature commands', () => {
     expect(screen.queryByRole('button', { name: 'Attack' })).toBeNull();
   });
 });
-const option = (id: string, levelRequired = 1) => ({ abilityId: id, abilityKey: id, damageType: 'fire', isDefault: id === 'fireball', calc: {},
+const option = (id: string, levelRequired = 1): LoadoutOption => ({ abilityId: id, abilityKey: id, damageType: 'fire', isDefault: id === 'fireball',
+  calc: { abilityKey: id, mechanicKey: 'spell_attack', amountCalc: null, durationCalc: null, intervalMs: null, effectConfig: {}, mechanicCalcs: {} },
   ability: { abilityKey: id, label: id, description: '', tooltip: '', cpCost: 10, type: 'spell_attack' as const,
     tier: 0, levelRequired, targetType: 'enemy', damageType: 'fire' } });
 function spellbook(overrides: Partial<Parameters<typeof EngineSpellbook>[0]> = {}) {
