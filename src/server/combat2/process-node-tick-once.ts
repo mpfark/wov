@@ -4,6 +4,7 @@ import * as playerCatalog from '../../shared/combat2/catalog.ts';
 import { decodeClaim } from '../../shared/combat2/decode.ts';
 import type { ClaimDecodeResult } from '../../shared/combat2/decode.ts';
 import * as resolver from '../../shared/combat2/resolver.ts';
+import * as engine from '../../shared/combat2/engine.ts';
 import type { AuthoredAbilityRecord, CatalogRejection } from '../../shared/combat2/catalog.ts';
 import type { BossCastRejection } from '../../shared/combat2/boss-catalog.ts';
 import type { ProposedTick } from '../../shared/combat2/types.ts';
@@ -188,7 +189,7 @@ export async function processNodeTickOnce(
 
   let proposal: ProposedTick;
   try {
-    proposal = (dependencies.resolve ?? resolver.resolveNodeTick)(bosses.snapshot, { abilities: abilities.specs });
+    proposal = (dependencies.resolve ?? engine.step)(bosses.snapshot, { abilities: abilities.specs });
   } catch (error) {
     return { ok: false, kind: 'resolver_failed', diagnostic: safeError(error) };
   }

@@ -14,4 +14,5 @@ Plan: .lovable/plan/wov-classic-architectural-modernization-plan-2026-11-09.md
 - [ ] Phases 2–8 per plan
 
 - [x] Phase 2a: engine entry point `src/shared/combat2/engine.ts` (step / applyTick / advance); golden fights now run through it (2026-11-10). Worker copy generated, not deployed.
-- [ ] Phase 2b: switch live workers to `engine.step` and deploy — waits on Mik's deploy approval.
+- [x] Phase 2b: live workers switched to engine.step and deployed (2026-11-10); GET 405, unsigned POST 401.
+- [ ] Live full-fight check — waits on Mik: world asleep, maintenance on, no combat scheduler; needs his go-ahead to wake + his signed-in character.
