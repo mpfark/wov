@@ -312,10 +312,13 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   const combat2 = useCombat2ClientSession({
     enabled: combat2OwnsSession,
     controlled: true,
-    inputLocked: ownership.locked,
-    characterId: ownership.origin.characterId,
+    inputLocked: ownership.locked && character.hp > 0,
+    characterId: character.id,
+    characterHp: character.hp,
+    recoveryEnabled: true,
+    arenaNode: COMBAT2_TEST_ARENA.nodes.some(node => node.id === character.current_node_id),
     classKey: character.class,
-    nodeId: ownership.origin.nodeId,
+    nodeId: character.current_node_id,
     hasLivingCreatures: !ownership.locked && rosterActionable ? creatures.some((creature) => creature.is_alive) : null,
     departurePending: authoritativeDeparture.pending,
   });
@@ -1675,9 +1678,9 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
               onAttack={handleSelectedBasicAttack}
               onSelectTarget={(id) => setSelectedTargetId(id)}
               onTalkToNPC={handleTalkToNPC}
-              inCombat={combat2.sessionStatus === 'active'}
-              lastTickTime={null}
-               activeCombatCreatureId={combat2Targets.selectedId}
+              inCombat={combat2.ownsActiveCombat}
+              lastTickTime={combat2.delivery.batches.length ? Date.parse(combat2.delivery.batches[combat2.delivery.batches.length - 1].createdAt) : null}
+               activeCombatCreatureId={activeCombat2Presentation?.autoattack?.active ? activeCombat2Presentation.autoattack.targetCreatureId : null}
                selectedTargetId={selectedTargetId}
               authoritativeTargetSelection={combat2BlocksLegacy}
               pendingBasicAttackTargetId={combat2.intents.pending?.action.kind === 'basic_attack'
@@ -1691,8 +1694,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
               combatActionsReady={combat2.actionsReady && !ownership.locked}
               getAbilityReadiness={getCombat2AbilityReadiness}
               abilityTargetId={abilityTargetId}
-              pendingAbilityIndex={pendingAbilityIndex}
-              pendingAbilityStage={pendingAbilityStage ?? null}
+              pendingAbilityIndex={combat2.intents.pending?.action.kind === 'ability' ? (CLASS_ABILITIES[character.class] ?? []).findIndex(ability => ability.abilityKey === combat2.intents.pending?.action.abilityKey) : null}
+              pendingAbilityStage={combat2.intents.pending ? 'submitted' : null}
               reservedBuffs={authoritativeCombat2Reservations as ReservedBuffsMap}
               actionBindings={keyboardMovement.actionBindings}
               authoritativeTelegraphs={activeCombat2Presentation?.telegraphsByCreatureLife}
@@ -2084,7 +2087,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
           </div>
         </div>
       )}
-      {isDead && combat2OwnsSession && (
+      {isDead && combat2BlocksLegacy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-md">
           <div className="text-center space-y-4 max-w-md">
             <p className="font-display text-2xl text-destructive">You Have Fallen</p>
