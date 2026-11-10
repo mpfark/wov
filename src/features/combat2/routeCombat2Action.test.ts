@@ -165,7 +165,7 @@ describe('Combat2 deliberate action routing', () => {
 
   it('feeds pointer and keyboard actions through the same spendable-CP router', () => {
     const page = readFileSync('src/pages/GamePage.tsx', 'utf8');
-    const view = readFileSync('src/features/world/components/NodeView.tsx', 'utf8');
+    const view = readFileSync('src/features/combat2/ui/EngineActionBar.tsx', 'utf8');
     expect(page).toContain('const handleAbilityKey = useCallback((index: number) => {');
     expect(page).toContain("const targetId = ability?.targetType === 'ally'");
     expect(page).toContain('void handlePlayerUseAbility(index, targetId);');
@@ -175,8 +175,8 @@ describe('Combat2 deliberate action routing', () => {
     expect(page).toContain('presentedCharacter.cp - authoritativeCombat2ReservedCp');
     expect(page).toContain('deriveCombat2HostileEntryReadiness({ readiness: combat2.actionReadiness');
     expect(page).toContain('combat2.entry.engageAction(targetCreatureId, abilityKey)');
-    expect(view).toContain('abilityAvailableCp ?? (character.cp ?? 0)');
-    expect(view).toContain('const readiness = getAbilityReadiness?.(idx, resolvedTarget);');
+    expect(view).toContain('props.availableCp ?? props.character.cp');
+    expect(view).toContain('const readiness = props.getReadiness?.(index, targetId);');
   });
 
   it('still permits dropping an active stance when spendable CP is zero', async () => {

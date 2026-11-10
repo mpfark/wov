@@ -40,7 +40,7 @@ export function EngineActionBar(props: Props) {
       const readiness = props.getReadiness?.(index, targetId);
       const disabled = readiness ? !readiness.ready
         : !props.actionsReady || levelLocked || insufficient || props.character.hp <= 0 || missingTarget;
-      const reason = readiness && !readiness.ready ? readiness.message : null;
+      const reason = readiness && 'message' in readiness ? readiness.message : null;
       const binding = props.actionBindings?.[`ability${index + 1}` as keyof ActionBindings]?.[0];
       const state = active ? 'bg-soulforged/15 border-soulforged text-soulforged hover:bg-soulforged/25'
         : pending ? 'border-elvish text-elvish ring-2 ring-elvish/70 motion-safe:animate-pulse'

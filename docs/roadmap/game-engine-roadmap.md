@@ -10,6 +10,14 @@ Current E/F rollout (2026-10-22): owner and published Lovable reports confirm 00
 
 ## Now — engine stabilization
 
+### ENG-MODERNIZE-003 — Engine-owned admin and player screens
+
+- **Engine area / status:** frontend composition; `implemented_source`.
+- **Outcome:** engine-owned player action bar and shared ability/loadout/stance/CP presentation registries; admin Game Engine workspace reuses installed arena and configured authoring screens; active player inspector reads accepted session projections instead of legacy timing. The old Combat Audit navigation now opens the engine workspace without legacy trace RPCs.
+- **Verification:** command/readiness/stance/registry identity tests, existing player integration and arena API tests, recorded-fight preservation; publication and hosted gameplay evidence remain separate in project state.
+- **Preserved / remaining:** all combat rules, heartbeat, ownership, bootstrap fallback, loadout RPCs, backend and configuration unchanged. Remaining fenced legacy hooks, general production audit API, prose/manual integration (ENG-ADMIN-001/ENG-MANUAL-001) and generic command migration remain later work.
+- **Specification sections:** Engine principles and authority; Creatures, targeting and initiation; Effects and stances; Failure, diagnostics and verification. All rules preserved.
+
 ### ENG-MODERNIZE-002 — Engine-owned combat worker rules
 
 - **Engine area / status:** combat worker consolidation; `implemented_source`.

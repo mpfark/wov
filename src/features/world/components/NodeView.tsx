@@ -10,7 +10,7 @@ import { getCharacterTitle } from '@/lib/game-data';
 import type { ClassAbility } from '@/features/combat2/ui/class-abilities';
 import type { ReservedBuffsMap } from '@/features/combat2/ui/stances';
 import { EngineActionBar } from '@/features/combat2/ui/EngineActionBar';
-import { getKeyLabel, type ActionBindings } from '@/features/world';
+import type { ActionBindings } from '@/features/world';
 import { nodeServiceMarkers } from '@/features/world/utils/service-registry';
 
 import { Button } from '@/components/ui/button';
