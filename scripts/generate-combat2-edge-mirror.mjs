@@ -27,11 +27,16 @@ for (const source of files(sourceRoot)) {
 
 // Formula modules reached by the Combat2 resolver are part of the same Edge
 // bundle boundary. Keep their Deno mirrors generator-owned as well.
-for (const name of ['resources.ts', 'stats.ts', 'classes.ts']) {
+for (const name of ['resources.ts', 'stats.ts', 'classes.ts', 'ability-calc.ts', 'combat.ts', 'economy.ts', 'items.ts', 'xp.ts', 'effective.ts']) {
   const source = join(root, 'src/shared/formulas', name);
   const destination = join(root, 'supabase/functions/_shared/formulas', name);
   mkdirSync(dirname(destination), { recursive: true });
   writeFileSync(destination, toDeno(readFileSync(source, 'utf8')));
+}
+
+// Old Combat1 rule locations are shims onto the engine's rules.
+for (const name of ['tick-rng.ts', 'pure/party-xp.ts']) {
+  writeFileSync(join(root, 'supabase/functions/_shared/combat', name), toDeno(readFileSync(join(root, 'src/shared/combat', name), 'utf8')));
 }
 
 const workerSource = join(root, 'src/server/combat2/process-node-tick-once.ts');
