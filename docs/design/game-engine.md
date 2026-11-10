@@ -50,6 +50,8 @@ Combat screen presentation is owned by `src/features/combat2/ui`: the player act
 
 The engine creature roster separates selection from attack, uses the current actionable roster plus accepted HP/effect/tank/telegraph projections, and never infers Combat2 statuses from legacy debuff or cast timers. The engine spellbook renders configured role choices and submits through the existing owner-validated loadout command. Standalone admin authoring and arena navigation select a tab in the same workspace; compact ability editing preserves the base/ability/configuration hierarchy without mounting competing controllers. Legacy player orchestration and general production audit access remain separately scoped retirement work.
 
+Player entry redirects unselected accounts to character selection, fences resource preparation by character/arena generation and offers explicit retry on refusal rather than claiming readiness. Arena admin reset/relocation may move another owner's enrolled tester only through the existing authorized admin relocation lane to that tester's verified active arena destination; ordinary ownership, departure and respawn gates remain unchanged. These are integration corrections, not gameplay-rule or permission-policy expansion.
+
 - Gameplay is server-authoritative. Clients submit intentions and render authoritative results.
 - Browsers never author persistent HP, CP, MP, position, damage, rewards or effects.
 - Resolution is deterministic from a claimed snapshot. Durable request IDs, idempotency, atomic commits and stale-state fences prevent duplicate damage, costs, movement, rewards and effects.

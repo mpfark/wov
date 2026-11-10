@@ -10,6 +10,14 @@ Current E/F rollout (2026-10-22): owner and published Lovable reports confirm 00
 
 ## Now — engine stabilization
 
+### ENG-MODERNIZE-004 — Player entry and arena recovery integration
+
+- **Engine area / status:** player entry and bounded arena-admin recovery; `implemented_source`.
+- **Outcome:** declarative unselected-player redirect; generation-fenced preparation with refusal/retry; enrolled other-owner arena relocation/reset through existing admin authority; dead-player attack controls fenced.
+- **Verification:** mounted route tests, real disposable PostgreSQL guard cases, authenticated reset/relocation and full arena-fight observation. Installed/runtime details belong in project state.
+- **Preserved / remaining:** all formulas, heartbeat, ordinary ownership and stored player data preserved; legacy controller removal and generic-command migration remain separate work, not implied complete.
+- **Specification sections:** Engine principles and authority; Character ownership and lifecycle; Failure, diagnostics and verification. Rules preserved.
+
 ### ENG-MODERNIZE-003 — Engine-owned admin and player screens
 
 - **Engine area / status:** frontend composition; `implemented_source`.
