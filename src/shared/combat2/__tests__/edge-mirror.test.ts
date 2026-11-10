@@ -20,14 +20,13 @@ describe('Combat2 deployed engine source parity', () => {
   }
 });
 describe('workers run only the engine', () => {
-  it('no engine file imports code outside the engine except the status contract', () => {
+  it('no engine file imports or re-exports code outside the engine', () => {
     const files = readdirSync('supabase/functions/_shared/combat2', { recursive: true }) as string[];
     for (const file of files.filter(name => name.endsWith('.ts'))) {
       const text = readFileSync(`supabase/functions/_shared/combat2/${file}`, 'utf8');
-      const outside = [...text.matchAll(/from\s+'([^']+)'/g)].map(m => m[1])
+      const outside = [...text.matchAll(/(?:from\s+|import\(\s*)['"]([^'"]+)['"]/g)].map(m => m[1])
         .filter(p => p.startsWith('../'));
-      const allowed = (p: string) => p === '../config/status-contract.ts';
-      expect(outside.filter(p => !allowed(p)), file).toEqual([]);
+      expect(outside, file).toEqual([]);
     }
   });
 });

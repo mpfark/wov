@@ -1,5 +1,5 @@
-import type { AuthoredAbilityRecord } from '../_shared/combat2/catalog.ts';
-import type { AppliedStatusRow } from '../_shared/config/status-contract.ts';
+import type { AuthoredAbilityRecord } from '../_shared/combat2/engine.ts';
+import type { AppliedStatusRow } from '../_shared/combat2/engine.ts';
 import { dispatchNodeTicksOnce, DISPATCH_LIMIT, type DispatchRunResult } from '../_shared/combat2/dispatch-node-ticks-once.ts';
 import { PROPOSAL_FIELDS, type CommitTickArgs, type NodeTickRunResult, type ProcessNodeTickDependencies } from '../_shared/combat2/process-node-tick-once.ts';
 import { bearerToken, constantTimeSecretEqual, redact } from '../_shared/combat2-internal-edge-auth.ts';

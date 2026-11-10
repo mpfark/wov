@@ -29,7 +29,7 @@ import {
   indexStatusRows,
   validateStatusDefinition,
   type AppliedStatusRow,
-} from '../config/status-contract.ts';
+} from './status-contract.ts';
 
 /** One authored, active ability record. Field names mirror the inventory dump. */
 export interface AuthoredAbilityRecord {
