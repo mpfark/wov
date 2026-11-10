@@ -232,6 +232,13 @@
       "when": 1794347982582,
       "tag": "0032_deprecate_unreachable_legacy_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794352722541,
+      "tag": "0033_combat2_arena_admin_recovery",
+      "breakpoints": true
     }
   ]
 }
