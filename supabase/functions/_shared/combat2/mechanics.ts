@@ -12,15 +12,15 @@
  * a re-resolved tick reproduces the same numbers exactly.
  */
 
-import { getStatModifier } from '../formulas/stats.ts';
-import { getClassCritRange, getWeaponAffinityBonus } from '../formulas/classes.ts';
+import { getStatModifier } from './rules/stats.ts';
+import { getClassCritRange, getWeaponAffinityBonus } from './rules/classes.ts';
 import {
   evaluateCalc,
   type AbilityCalc,
   type CalcContextKey,
   type CalcInputs,
   type CalcStat,
-} from '../formulas/ability-calc.ts';
+} from './rules/ability-calc.ts';
 import {
   getAccuracyBonus,
   getAccuracyProficiency,
@@ -34,7 +34,7 @@ import {
   DEFAULT_WEAPON_PROGRESSION,
   type AccuracyStat,
   type WeaponProgressionConfig,
-} from '../formulas/combat.ts';
+} from './rules/combat.ts';
 import { applyMitigationPipeline, readMitigationParams } from './mitigation.ts';
 import type {
   MechanicKey,

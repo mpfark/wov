@@ -7,13 +7,13 @@
  * the authoritative wall clock) and never calls `Math.random()`.
  */
 
-import { getCreatureXp, getXpPenalty } from '../formulas/xp.ts';
-import { getChaGoldMultiplier } from '../formulas/economy.ts';
-import { getPartyXpBonus } from '../combat/pure/party-xp.ts';
-import { getCreatureDamageDie, getCreatureAttackBonus, CREATURE_CRIT_MULT, HIT_QUALITY_MULT, getEffectiveAC, type WeaponProgressionConfig } from '../formulas/combat.ts';
-import { getStatModifier } from '../formulas/stats.ts';
-import { effectiveItemStats } from '../formulas/items.ts';
-import { getCpRegen, getEffectiveMaxCp, getEffectiveMaxHp, getEffectiveMaxMp, getMilestoneCpRegen } from '../formulas/resources.ts';
+import { getCreatureXp, getXpPenalty } from './rules/xp.ts';
+import { getChaGoldMultiplier } from './rules/economy.ts';
+import { getPartyXpBonus } from './rules/party-xp.ts';
+import { getCreatureDamageDie, getCreatureAttackBonus, CREATURE_CRIT_MULT, HIT_QUALITY_MULT, getEffectiveAC, type WeaponProgressionConfig } from './rules/combat.ts';
+import { getStatModifier } from './rules/stats.ts';
+import { effectiveItemStats } from './rules/items.ts';
+import { getCpRegen, getEffectiveMaxCp, getEffectiveMaxHp, getEffectiveMaxMp, getMilestoneCpRegen } from './rules/resources.ts';
 import { applyMitigationPipeline, readMitigationParams } from './mitigation.ts';
 import { TickRandom } from './rng.ts';
 import { ownedStackIdentity, sharedStatusIdentity } from './stack-identity.ts';
