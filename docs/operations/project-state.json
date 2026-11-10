@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-10T23:27:24Z",
+  "updated_at": "2026-11-10T23:49:42Z",
   "based_on_source_sha": "e1faa06b4fbf59d723636bde74af6abd503609a2",
   "status_vocabulary": [
     "authored",
@@ -842,6 +842,17 @@
     "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails."
   },
   "combat2_operational_work": [
+    {
+      "identity": "ENG-MODERNIZE-005 \u2014 combat screens retired and ordinary-world fight",
+      "status": "ready_for_manual_publish",
+      "sha": "bbd6a1557fc29378f258bc1fe4becdd37e6d699e",
+      "timestamp": "2026-11-10T23:49:42Z",
+      "evidence_type": "cloud_inspection",
+      "reporting_actor": "Lovable; Mik screen-retirement/real-world-fight authorization",
+      "directly_verified": true,
+      "artifact": "docs/operations/combat2-screen-retirement-2026-11-10.md",
+      "evidence": "Unconditional engine creature roster; old audit delegates workspace; obsolete timing/automatic-death screens removed. Engine projections replace legacy screen HP/effects/cast/pending/target data; shared-domain fenced orchestration retained.126 tests/10files pass including46golden/28mirror; automatic buildOK23:48:39UTC. Existing tester account created Engineproof normally, walkedS,S,SW,E into ordinary-world aggressive Sharp-Tooth Rat. Encounter16ca9a18-614c-47b6-979a-fd23912a6201 endedtick12,test_arena_idNULL at23:44:13UTC; real UI attacks/misses/grazes/damage and terminaldeath0/16 observed. Mobile no page errors/overflow. Refresh-reconnect hid death screen; fixed owner-read HP recovery without active snapshot, preserving active projection and arena exclusion; tested/exercised existing respawn. Fresh23:48:49UTC tester16/16HP Hearthvale,gold180from200,0active encounters/liveclaims. Supported Mik admin Emergency Shutdown accepted after recovery;23:49:29UTCworldasleep/maintenance;23:45:29UTCscheduler0, final scheduler followup below. Test character retained, no direct revive/deletion/relocation/grants. SQL/types/Edge unchanged, no publication; real Cloud gameplay through preview is not published-frontend activation. Classless/unarmed death, no victory/classability/multiplayer/reward proof. Earlier arena-only limitations remain historical; full orchestration/generic-pipeline retirement not claimed."
+    },
     {
       "identity": "ENG-MODERNIZE-004 \u2014 entry/recovery and bounded live engine fight",
       "status": "ready_for_manual_publish",
