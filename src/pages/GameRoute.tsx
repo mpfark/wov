@@ -1,5 +1,5 @@
 import { useGameContext } from '@/contexts/GameContext';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import GamePage from './GamePage';
@@ -7,6 +7,7 @@ import { EmailVerificationGate } from '@/components/EmailVerificationGate';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { combat2ArenaReservesLegacy } from '@/features/combat2/test-config';
 import { COMBAT2_CLIENT_ENABLED } from '@/shared/config/feature-flags';
+import { Button } from '@/components/ui/button';
 
 export default function GameRoute() {
   const { user, authLoading, character, charLoading, nodesLoading, updateCharacter, updateCharacterLocal, clearCharacterFields, signOut, isAdmin, nodes, startingNode, clearSelectedCharacter, refetchCharacters, resourceDelivery } = useGameContext();
@@ -18,7 +19,9 @@ export default function GameRoute() {
   // prevents GamePage from mounting before sync — a pre-sync mount would emit
   // the first-entry welcome on a bus that gets discarded when sync flips this
   // value, leaving the player with only "Welcome back" on the real mount.
-  const [syncedCharId, setSyncedCharId] = useState<string | null>(null);
+  const [syncedGeneration, setSyncedGeneration] = useState<number | null>(null);
+  const [entryError, setEntryError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
   const syncStartedForRef = useRef<string | null>(null);
   const restrictedTester = combat2ArenaReservesLegacy(character?.current_node_id);
   const restrictedRef = useRef(restrictedTester);
@@ -41,9 +44,11 @@ export default function GameRoute() {
   // HP/CP/MP "snap-back" caused by the row's max_* lagging behind gear.
   useEffect(() => {
     if (!character?.id) return;
-    if (restrictedTester) { setSyncedCharId(character.id); return; }
-    if (syncStartedForRef.current === character.id) return;
-    syncStartedForRef.current = character.id;
+    if (restrictedTester) { setSyncedGeneration(entryGeneration); setEntryError(null); return; }
+    const attemptKey = `${character.id}:${entryGeneration}:${retry}`;
+    if (syncStartedForRef.current === attemptKey) return;
+    syncStartedForRef.current = attemptKey;
+    setEntryError(null);
     // Stances are only wiped on the FIRST entry of a browser session. A remount
     // of this route (or a tab reload) must not drop the player's active stances.
     const entryKey = `wov:entrySynced:${character.id}`;
@@ -56,31 +61,43 @@ export default function GameRoute() {
         if (!current()) return;
         if (firstEntryThisSession && !COMBAT2_CLIENT_ENABLED) {
           // Wipe leftover stance reservations from a previous session.
-          await supabase.rpc('clear_stances' as any, { p_character_id: character.id });
+          const cleared = await supabase.rpc('clear_stances' as any, { p_character_id: character.id });
+          if (cleared.error) throw cleared.error;
           if (!current()) return;
         }
-        await supabase.rpc('sync_character_resources' as any, { p_character_id: character.id });
+        const result = await supabase.rpc('sync_character_resources' as any, { p_character_id: character.id });
+        if (result.error) throw result.error;
         if (!current()) return;
         sessionStorage.setItem(entryKey, '1');
         refetchCharacters();
+        setSyncedGeneration(entryGeneration);
       } catch (e) {
-        console.error('Failed to sync character resources on entry:', e);
-      } finally {
-        if (current()) setSyncedCharId(character.id);
+        if (current()) setEntryError('Your character could not be prepared. Please try again.');
       }
     })();
-  }, [character?.id, refetchCharacters, restrictedTester, entryGeneration]);
+  }, [character?.id, refetchCharacters, restrictedTester, entryGeneration, retry]);
 
 
-  const isSyncedForCurrent = !!character?.id && syncedCharId === character.id;
+  const isSyncedForCurrent = !!character?.id && syncedGeneration === entryGeneration;
+
+  if (!authLoading && !charLoading && !nodesLoading && (!user || !character)) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (entryError && !isSyncedForCurrent) {
+    return <div className="flex min-h-screen flex-col items-center justify-center gap-3 parchment-bg">
+      <p role="alert" className="font-display text-destructive text-center px-4">{entryError}</p>
+      <Button onClick={() => { setEntryError(null); setRetry(value => value + 1); }}>Retry</Button>
+      <Button variant="outline" onClick={() => { clearSelectedCharacter(); navigate('/'); }}>Choose character</Button>
+    </div>;
+  }
 
   if (authLoading || charLoading || nodesLoading || (!!character?.id && !isSyncedForCurrent)) {
     return <LoadingScreen />;
   }
 
   if (!user || !character) {
-    navigate('/', { replace: true });
-    return null;
+    return <Navigate to="/" replace />;
   }
 
   // Email verification gate. Users created via OAuth (Google) have an email_confirmed_at
