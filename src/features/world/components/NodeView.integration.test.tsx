@@ -57,6 +57,14 @@ describe('ability buttons keep target domains separate',()=>{
 });
 
 describe('creature HP first paint',()=>{
+ it('submits an idle-world attack from the engine roster even when a target is selected',()=>{
+  const attack=vi.fn();render(<NodeView {...props()} authoritativeTargetSelection={false} onAttack={attack}/>);
+  fireEvent.click(screen.getByRole('button',{name:'Attack'}));expect(attack).toHaveBeenCalledExactlyOnceWith(target);
+ });
+ it('refuses creature attack clicks while the world player is dead',()=>{
+  const attack=vi.fn();const p=props();render(<NodeView {...p} character={{...p.character,hp:0}} onAttack={attack}/>);
+  fireEvent.click(screen.getByRole('button',{name:'Attack'}));expect(attack).not.toHaveBeenCalled();
+ });
  it('keeps names but hides cached HP until fresh roster data arrives',()=>{
   const view=render(<NodeView {...props()} rosterActionable={false}/>);
   expect(screen.getByText('Passive wolf')).toBeInTheDocument();expect(screen.queryByText('10/80')).not.toBeInTheDocument();expect(screen.getByLabelText('Loading HP for Passive wolf')).toBeInTheDocument();

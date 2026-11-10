@@ -23,7 +23,7 @@ import { useNodeChannel } from '@/features/world';
 import { useGlobalPresence } from '@/hooks/useGlobalPresence';
 import { useCreatures } from '@/features/creatures';
 import { useItemCache } from '@/features/inventory';
-import { useCreatureBroadcast, useMergedCreatureHpOverrides, useBossCasts } from '@/features/combat';
+import { useCreatureBroadcast, useBossCasts } from '@/features/combat';
 import { usePartyBroadcast } from '@/features/party';
 import { useNPCs, NPC } from '@/features/creatures';
 import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
@@ -246,7 +246,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     return creaturesRef.current.find(c => c.id === creatureId)?.name;
   }, []);
   const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { event: legacyStringToEvent(msg) }); }, [bus]);
-  const { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver, !combat2BlocksLegacy);
+  const { softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver, !combat2BlocksLegacy);
   const { creatures, creaturesLoading, removeCreatureLocal, rosterActionable, rosterStatus, rosterError } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, softDeadIds, character.id);
   const {
     party, members: partyMembers, pendingInvites, outgoingInvites, operationMessage: partyOperationMessage, isLeader, isTank, myMembership,
@@ -818,8 +818,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   const {
     foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff,
-    poisonBuff, poisonStacks, evasionBuff, igniteBuff, igniteStacks,
-    absorbBuff, partyRegenBuff, sunderDebuff, bleedStacks,
+    poisonBuff, evasionBuff, igniteBuff,
+    absorbBuff, partyRegenBuff, sunderDebuff,
     inspireBuff,
     holyShieldBuff, consecrateBuff, divineChallengeBuff,
   } = buffState;
@@ -914,7 +914,6 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   // Telegraph feed. Created before the driver so committed cast transitions can
   // be handed straight to it as each batch is applied.
   const bossCastFeed = useBossCasts(combat2BlocksLegacy ? null : character.current_node_id);
-  const bossCasts = bossCastFeed.casts;
 
   const combat = useCombatDriver({
     enabled: !combat2BlocksLegacy,
@@ -958,8 +957,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   });
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
-    lastTickTime, startCombat, stopCombat: stopCombatFn,
-    fleeStopCombat, queueAbility, pendingCpCost, pendingAbility,
+    startCombat, stopCombat: stopCombatFn,
+    fleeStopCombat, queueAbility, pendingCpCost,
     pendingAbilityIndex, pendingAbilityStage } = combat;
 
   // Inventory actions are authoritative RPCs, not the retired combat runtime.
@@ -976,7 +975,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
   }, [equipmentLockReason, inventoryUnequipItem, addLogEvent]);
 
   // Merge creature HP from all sources: combat-tick > broadcast > base
-  const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides);
+
 
   // Offscreen DoT wake-up was a player-triggered call into the internal
   // `combat-catchup` endpoint and has been removed. Offscreen progression is
@@ -1677,8 +1676,8 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
               onSelectTarget={(id) => setSelectedTargetId(id)}
               onTalkToNPC={handleTalkToNPC}
               inCombat={combat2.sessionStatus === 'active'}
-              lastTickTime={combat2.lastCommitAt}
-               activeCombatCreatureId={combat2Targets.selectedCreatureId}
+              lastTickTime={null}
+               activeCombatCreatureId={combat2Targets.selectedId}
                selectedTargetId={selectedTargetId}
               authoritativeTargetSelection={combat2BlocksLegacy}
               pendingBasicAttackTargetId={combat2.intents.pending?.action.kind === 'basic_attack'
@@ -1694,7 +1693,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
               abilityTargetId={abilityTargetId}
               pendingAbilityIndex={pendingAbilityIndex}
               pendingAbilityStage={pendingAbilityStage ?? null}
-              reservedBuffs={authoritativeCombat2Reservations}
+              reservedBuffs={authoritativeCombat2Reservations as ReservedBuffsMap}
               actionBindings={keyboardMovement.actionBindings}
               authoritativeTelegraphs={activeCombat2Presentation?.telegraphsByCreatureLife}
               authoritativeEncounterTick={activeCombat2Presentation?.encounterTick}
