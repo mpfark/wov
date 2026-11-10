@@ -7,9 +7,10 @@ import { NPC } from '@/features/creatures';
 import { Character } from '@/features/character';
 import { GroundLootItem } from '@/features/inventory';
 import { getCharacterTitle } from '@/lib/game-data';
-import { ClassAbility } from '@/features/combat';
-import { resolveStanceForAbility, isStanceActive, type ReservedBuffsMap } from '@/features/combat/utils/stances';
-import { getKeyLabel, type ActionBindings } from '@/features/world';
+import type { ClassAbility } from '@/features/combat2/ui/class-abilities';
+import type { ReservedBuffsMap } from '@/features/combat2/ui/stances';
+import { EngineActionBar } from '@/features/combat2/ui/EngineActionBar';
+import type { ActionBindings } from '@/features/world';
 import { nodeServiceMarkers } from '@/features/world/utils/service-registry';
 
 import { Button } from '@/components/ui/button';
@@ -639,68 +640,11 @@ export default function NodeView({
           <div className="divider-hairline mt-1" />
           <div className="pt-1.5 space-y-1.5 flex flex-col items-center">
             {/* Row 3: Abilities */}
-            {classAbilities.length > 0 && onUseAbility && (
-              <div className="flex flex-wrap items-center gap-1 justify-center">
-                {classAbilities.map((ability, idx) => {
-                  const levelLocked = character.level < ability.levelRequired;
-                  const stanceDef = resolveStanceForAbility(ability);
-                  const stanceActive = !!(stanceDef && isStanceActive(reservedBuffs, stanceDef.key));
-                  const availableCp = abilityAvailableCp ?? (character.cp ?? 0);
-                  const notEnoughCp = !stanceActive && availableCp < ability.cpCost;
-                  const needsTarget = ability.type === 'hp_transfer';
-                  const resolvedTarget = ability.targetType === 'enemy'
-                    ? creatures.find(c => c.id === selectedTargetId && c.is_alive)?.id
-                    : ability.targetType === 'ally' ? abilityTargetId ?? character.id
-                    : ability.targetType === 'self' ? character.id : undefined;
-                  const disableNoTarget = needsTarget && !resolvedTarget;
-                  const isPending = pendingAbilityIndex === idx;
-                  const readiness = getAbilityReadiness?.(idx, resolvedTarget);
-                  const disabled = readiness
-                    ? !readiness.ready
-                    : !combatActionsReady || levelLocked || notEnoughCp || character.hp <= 0 || disableNoTarget;
-                  const disabledMessage = readiness && 'message' in readiness ? readiness.message : null;
-                  const stateClass = stanceActive
-                    ? 'bg-soulforged/15 border-soulforged text-soulforged hover:bg-soulforged/25'
-                    : isPending
-                      ? 'border-elvish text-elvish ring-2 ring-elvish/70 animate-pulse'
-                      : 'text-elvish border-elvish/50';
-                  return (
-                    <Tooltip key={idx}>
-                      <TooltipTrigger asChild>
-                        <span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onUseAbility(idx, resolvedTarget)}
-                            disabled={disabled}
-                            title={disabledMessage ?? undefined}
-                            aria-label={disabledMessage ? `${ability.label}: ${disabledMessage}` : ability.label}
-                            className={`font-display text-[10px] h-6 px-2 ${stateClass}`}
-                          >
-                            {ability.label}
-                            {actionBindings?.[`ability${idx + 1}` as keyof ActionBindings]?.[0] && !levelLocked && !notEnoughCp && (
-                              <span className="ml-0.5 text-[8px] text-muted-foreground">[{getKeyLabel(actionBindings[`ability${idx + 1}` as keyof ActionBindings][0])}]</span>
-                            )}
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="text-xs max-w-[200px]">
-                        {disabledMessage
-                          ? disabledMessage
-                          : levelLocked
-                          ? `Unlocks at level ${ability.levelRequired}`
-                          : stanceActive
-                            ? `${ability.tooltip} · Active — click to drop (CP not refunded).`
-                            : isPending
-                              ? `${ability.tooltip} · ${pendingAbilityStage === 'submitted' ? 'Waiting for the next combat tick…' : 'Preparing…'}`
-                              : `${ability.tooltip} · requires ${ability.cpCost} CP · ${availableCp} available${disableNoTarget ? ' — select a target in party panel' : ''}`
-                        }
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
-              </div>
-            )}
+            <EngineActionBar abilities={classAbilities} character={character} creatures={creatures}
+              onUseAbility={onUseAbility} selectedTargetId={selectedTargetId} allyTargetId={abilityTargetId}
+              availableCp={abilityAvailableCp} actionsReady={combatActionsReady} getReadiness={getAbilityReadiness}
+              pendingIndex={pendingAbilityIndex} pendingStage={pendingAbilityStage}
+              reservations={reservedBuffs} actionBindings={actionBindings} />
           </div>
         </div>
         <InspectPlayerDialog

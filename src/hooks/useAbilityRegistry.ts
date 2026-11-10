@@ -3,7 +3,7 @@
  * registry once per session (Phase 2b: configurable abilities).
  *
  * Until the fetch resolves (or when `USE_CONFIG_ABILITIES` is off), the
- * hardcoded fallback lists in `@/features/combat/utils/class-abilities` remain
+ * hardcoded fallback lists in `@/features/combat2/ui/class-abilities` remain
  * in effect. These are bootstrap presentation defaults, not proof of current
  * configured costs, alternatives or status applications. Combat2 resolves from
  * its separately published catalogue; callers can inspect `source` below.
@@ -12,11 +12,11 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   setAbilityRegistry, isAbilityRegistryLoaded, type AbilityConfigRow,
-} from '@/features/combat/utils/class-abilities';
+} from '@/features/combat2/ui/class-abilities';
 import {
   setAbilityCalcRegistry, type AbilityCalcConfigRow,
-} from '@/features/combat/utils/ability-calcs';
-import { setLoadoutOptions } from '@/features/combat/utils/ability-loadout';
+} from '@/features/combat2/ui/ability-calcs';
+import { setLoadoutOptions } from '@/features/combat2/ui/ability-loadout';
 import { setAbilityTextRegistry } from '@/features/combat/utils/ability-text';
 import { USE_CONFIG_ABILITIES } from '@/shared/config/feature-flags';
 import { applyAssignmentOverrides } from '@/shared/config/effective-ability';

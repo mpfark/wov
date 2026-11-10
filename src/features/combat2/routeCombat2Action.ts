@@ -1,5 +1,5 @@
-import type { ClassAbility } from '@/features/combat/utils/class-abilities';
-import { isStanceActive, resolveStanceForAbility, type ReservedBuffsMap } from '@/features/combat/utils/stances';
+import type { ClassAbility } from '@/features/combat2/ui/class-abilities';
+import { isStanceActive, resolveStanceForAbility, type ReservedBuffsMap } from '@/features/combat2/ui/stances';
 import type { Combat2IntentAction } from './intent';
 import type { Combat2IntentResult } from './useCombat2IntentSession';
 import type { Combat2TargetResolution } from './target-resolution';

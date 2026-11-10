@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   applyAbilityLoadout, getLoadoutRoles, getRolesWithAlternatives, type LoadoutRole,
-} from '@/features/combat/utils/ability-loadout';
+} from '@/features/combat2/ui/ability-loadout';
 
 export interface AbilityLoadoutState {
   /** Roles that offer a real choice (more than one active option). */

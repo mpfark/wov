@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-10T22:45:09Z",
+  "updated_at": "2026-11-10T22:52:57Z",
   "based_on_source_sha": "e1faa06b4fbf59d723636bde74af6abd503609a2",
   "status_vocabulary": [
     "authored",
@@ -831,6 +831,17 @@
     "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails."
   },
   "combat2_operational_work": [
+    {
+      "identity": "ENG-MODERNIZE-003 \u2014 engine-owned admin and player screens",
+      "status": "ready_for_manual_publish",
+      "sha": null,
+      "timestamp": "2026-11-10T22:52:57Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Lovable; Mik frontend implementation request",
+      "directly_verified": true,
+      "artifact": "docs/operations/combat2-engine-screens-2026-11-10.md",
+      "evidence": "Engine-owned action bar, ability/loadout/calc/stance/CP presentation registries and shared compatibility instances; admin Game Engine workspace reuses existing Arena/Abilities/Statuses/Classes APIs. Old active Combat Audit entry now opens engine workspace without legacy trace toggle; mounted legacy CombatTiming replaced by accepted-session inspector. 211 focused tests pass across18 files (player routing/targets/CP/stances, configured registry/loadouts, admin tab-controller mounting, arena API, 46-case golden master and no-emoji); preview build OK. No SQL, permissions, configuration, Edge, scheduler or gameplay mutation. Requester-scoped preview session minted successfully; authenticated /admin returned Admin access required and redirected to /game. Admin end-to-end and desktop/mobile screenshots of new screens remain unverified; no access-control bypass or role mutation. Starting HEAD and cached origin/main both e378c1dfbf323e896d51a423eee4a6d40fb59ace; based_on_source_sha ancestry verified. Fresh Git fetch not performed because stateful Git operations prohibited; managed commit/push identity pending, not claimed. Mik manual frontend publication not performed. Remaining fenced legacy orchestration and general production encounter-audit API not migrated; rules/one-heartbeat/server authority unchanged."
+    },
     {
       "identity": "ENG-ABILITY-WIZARD-001G3B \u2014 producer/persistence contract handoff; authority gate OPEN",
       "status": "blocked",

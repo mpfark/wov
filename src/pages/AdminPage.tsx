@@ -36,6 +36,7 @@ import BatchNodeEditPanel from '@/components/admin/BatchNodeEditPanel';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import Combat2TestArenaPanel from '@/components/admin/Combat2TestArenaPanel';
+import EngineAdminWorkspace from '@/features/combat2/ui/EngineAdminWorkspace';
 
 interface AdminPageProps {
   isValar: boolean;
@@ -394,6 +395,8 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         return <UserManager isValar={isValar} />;
       case 'combat2-test-arena':
         return <Combat2TestArenaPanel />;
+      case 'engine':
+        return <EngineAdminWorkspace />;
       case 'issues':
         return <IssueReportManager />;
       case 'marketplace':
