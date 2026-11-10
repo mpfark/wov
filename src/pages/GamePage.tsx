@@ -246,7 +246,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
     return creaturesRef.current.find(c => c.id === creatureId)?.name;
   }, []);
   const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { event: legacyStringToEvent(msg) }); }, [bus]);
-  const { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver, !combat2BlocksLegacy);
+  const { softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver, !combat2BlocksLegacy);
   const { creatures, creaturesLoading, removeCreatureLocal, rosterActionable, rosterStatus, rosterError } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, softDeadIds, character.id);
   const {
     party, members: partyMembers, pendingInvites, outgoingInvites, operationMessage: partyOperationMessage, isLeader, isTank, myMembership,
