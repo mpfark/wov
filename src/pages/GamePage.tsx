@@ -961,8 +961,7 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
     startCombat, stopCombat: stopCombatFn,
-    fleeStopCombat, queueAbility, pendingCpCost,
-    pendingAbilityIndex, pendingAbilityStage } = combat;
+    fleeStopCombat, queueAbility, pendingCpCost } = combat;
 
   // Inventory actions are authoritative RPCs, not the retired combat runtime.
   const equipmentLockReason = equipmentChangeReason({ legacyCombat: inCombat, combat2Enabled: combat2BlocksLegacy,
