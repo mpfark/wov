@@ -5,7 +5,8 @@ import ItemCoverageAnalyzer from './ItemCoverageAnalyzer';
 import UniqueReclaimManager from './UniqueReclaimManager';
 import CreditDrainHistory from './CreditDrainHistory';
 import ClassBondsInspector from './tools/ClassBondsInspector';
-import CombatAuditPanel from './tools/CombatAuditPanel';
+import EngineAdminWorkspace from '@/features/combat2/ui/EngineAdminWorkspace';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface ToolsPanelProps {
@@ -16,7 +17,7 @@ interface ToolsPanelProps {
 const TOOLS = [
   { key: 'item-coverage', label: 'Item Coverage', icon: BarChart3 },
   { key: 'class-bonds', label: 'Class Bonds', icon: Shield },
-  { key: 'combat-audit', label: 'Combat Audit', icon: ScrollText },
+  { key: 'combat-audit', label: 'Game Engine', icon: ScrollText },
   { key: 'unique-reclaim', label: 'Unique Reclaim', icon: Crown },
   { key: 'credit-drain', label: 'Credit Drain', icon: Sparkles },
 ] as const;
@@ -32,7 +33,7 @@ export default function ToolsPanel({ defaultTool = 'item-coverage' }: ToolsPanel
       case 'class-bonds':
         return <div className="h-full overflow-auto"><ClassBondsInspector /></div>;
       case 'combat-audit':
-        return <div className="h-full min-h-0"><CombatAuditPanel /></div>;
+        return <div className="h-full min-h-0"><EngineAdminWorkspace /></div>;
 
       case 'unique-reclaim':
         return <div className="h-full overflow-auto"><UniqueReclaimManager /></div>;
@@ -53,7 +54,7 @@ export default function ToolsPanel({ defaultTool = 'item-coverage' }: ToolsPanel
             const Icon = t.icon;
             const isActive = active === t.key;
             return (
-              <button
+              <Button variant="ghost"
                 key={t.key}
                 onClick={() => setActive(t.key)}
                 className={cn(
@@ -65,7 +66,7 @@ export default function ToolsPanel({ defaultTool = 'item-coverage' }: ToolsPanel
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">{t.label}</span>
-              </button>
+              </Button>
             );
           })}
         </nav>
