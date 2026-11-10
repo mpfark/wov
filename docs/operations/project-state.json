@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-10T22:58:13Z",
+  "updated_at": "2026-11-10T23:05:43Z",
   "based_on_source_sha": "e1faa06b4fbf59d723636bde74af6abd503609a2",
   "status_vocabulary": [
     "authored",
@@ -831,6 +831,17 @@
     "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails."
   },
   "combat2_operational_work": [
+    {
+      "identity": "ENG-MODERNIZE-003 \u2014 remaining creature/spellbook screens and unified admin navigation",
+      "status": "ready_for_manual_publish",
+      "sha": null,
+      "timestamp": "2026-11-10T23:05:43Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Lovable; Mik remaining engine screens request",
+      "directly_verified": true,
+      "artifact": "docs/operations/combat2-engine-remaining-screens-2026-11-10.md",
+      "evidence": "EngineCreatureRoster renders current actionable roster and accepted HP/effect/tank/telegraph projections with separate selection and attack commands; active Combat2 NodeView branches to it without legacy debuff/cast inference. EngineSpellbook owns configured loadout choices through existing owner-validated RPC hook; former character screen delegates. Existing admin Abilities/Statuses/Classes/Arena navigation selects one EngineAdminWorkspace tab. Ability library compact panes preserve base/ability/editor hierarchy and explicit back navigation; no new APIs or duplicate authoring authority. 132 tests across12 files pass, including 46 golden fights, source browser/resource isolation, player routing/loadouts, admin editing and no-emoji. Automatic build OK. Authenticated Mik admin /admin engine Abilities loads35 configured bases; desktop1280x1800 and mobile360x677 screenshots inspected; base selection/edit-base/back navigation succeeds; no horizontal page overflow or page errors. Player /game navigation displayed blank with no page errors during bounded attempt; not player end-to-end verification, no character selection/fight/loadout save performed. Existing arena reset refusal remains separate unresolved prerequisite. No SQL, role, configuration save, types, Edge, scheduler/world-control or publication mutation. Starting HEAD/cached origin/main6fadf2a1120c276b089b9eac9c514378d9061657 and baseline ancestry verified; fresh fetch prohibited by environment, remote freshness unknown; managed final commit identity pending. All engine rules and heartbeat preserved. Legacy screens/hooks retained for separately scoped retirement; general production encounter audit and canonical manual/roadmap presentation remain separate work."
+    },
     {
       "identity": "ENG-MODERNIZE-003 \u2014 Mik admin enabled; live arena reset refused",
       "status": "blocked",
