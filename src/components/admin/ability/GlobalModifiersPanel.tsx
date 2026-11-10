@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { bondMultiplier } from '@/shared/formulas/bond';
-import { resolveAmountByKey } from '@/features/combat/utils/ability-calcs';
+import { resolveAmountByKey } from '@/features/combat2/ui/ability-calcs';
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;

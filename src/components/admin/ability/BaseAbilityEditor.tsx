@@ -31,7 +31,7 @@ import CalcBuilder from './CalcBuilder';
 import MechanicCalcsEditor from './MechanicCalcsEditor';
 import { validateAbilityForPublish } from '@/shared/config/mechanic-templates';
 import type { AbilityCalc, CalcInputs } from '@/shared/formulas/ability-calc';
-import { getKnownAbilityMechanics } from '@/features/combat/utils/class-abilities';
+import { getKnownAbilityMechanics } from '@/features/combat2/ui/class-abilities';
 import {
   ACTIVATION_MODES, CAPABILITY_SECTIONS, TARGET_TYPES, TRIGGER_TYPES,
   capabilityList, type CapabilityKey,

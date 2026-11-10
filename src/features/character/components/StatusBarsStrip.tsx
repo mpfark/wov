@@ -5,7 +5,7 @@ import { Character } from '@/features/character';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getXpForLevel, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
 
-import { getCpDisplay } from '@/features/combat/utils/cp-display';
+import { getCpDisplay } from '@/features/combat2/ui/cp-display';
 import { Combat2EffectPills } from '@/features/combat2/Combat2EffectPills';
 import type { Combat2PresentationEffect } from '@/features/combat2/presentation';
 import type { Combat2CharacterStance } from '@/features/combat2/useCombat2StanceSession';

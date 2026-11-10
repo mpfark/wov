@@ -42,7 +42,7 @@ import { legacyStringToEvent } from '@/features/combat/events/legacy-adapter';
 
 import { useCombatDriver } from '@/features/combat';
 import { getBagWeight, getEffectiveMaxHp, getEffectiveAC } from '@/lib/game-data';
-import { CLASS_ABILITIES } from '@/features/combat';
+import { CLASS_ABILITIES } from '@/features/combat2/ui/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -63,14 +63,14 @@ import { useConsumableActions } from '@/features/inventory/hooks/useConsumableAc
 import { useCombat2ResourceCapture } from '@/features/combat2/useCombat2ResourceCapture';
 import { diagnosticPlayerResources } from '@/features/combat2/diagnostics';
 import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
-import CombatTimingPanel from '@/components/admin/CombatTimingPanel';
+import { EngineSessionInspector } from '@/features/combat2/ui/EngineSessionInspector';
 import MovementPad from '@/features/world/components/MovementPad';
 import { useStatAllocation } from '@/features/character/hooks/useStatAllocation';
 import EventLogPanel from '@/features/combat/components/EventLogPanel';
 import EventLogControls from '@/features/combat/components/EventLogControls';
 import { useEventLogDisplay } from '@/features/combat/hooks/useEventLogDisplay';
 import { useCombat2ResourceHandoff } from '@/features/combat2/useCombat2ResourceHandoff';
-import { AbilityBarMeasurer } from '@/features/combat/components/AbilityBarMeasurer';
+import { AbilityBarMeasurer } from '@/features/combat2/ui/AbilityBarMeasurer';
 import ChatPanel from '@/features/chat/components/ChatPanel';
 import OnlinePanel from '@/features/chat/components/OnlinePanel';
 import CommandInputBar from '@/features/chat/components/CommandInputBar';
@@ -91,7 +91,7 @@ import { useCombat2Targets } from '@/features/combat2/useCombat2Targets';
 import { routeCombat2Action, routeCombat2BasicAttack } from '@/features/combat2/routeCombat2Action';
 import { deriveCombat2AbilityReadiness, deriveCombat2HostileEntryReadiness, type ActionReadiness } from '@/features/combat2/action-readiness';
 import type { Combat2IntentAction } from '@/features/combat2/intent';
-import { getStanceReserveCost, isStanceActive, resolveStanceForAbility, type ReservedBuffsMap } from '@/features/combat/utils/stances';
+import { getStanceReserveCost, isStanceActive, resolveStanceForAbility, type ReservedBuffsMap } from '@/features/combat2/ui/stances';
 import { selectCombat2Character, selectCombat2Creatures, selectCombat2Events, selectCombat2StatusPresentation } from '@/features/combat2/presentation-selectors';
 import { selectCombat2Reservations } from '@/features/combat2/presentation';
 import { combat2FleeCommandRefusal } from '@/features/combat2/event-message';
@@ -2119,7 +2119,10 @@ export default function GamePage({ character, updateCharacter: writeCharacter, u
         diagnostic: combat2VisibleLog.historical ? 'Last confirmed combat state shown.' : combat2Diagnostic }} />}
 
       {/* Combat timing breakdown — development instrumentation only */}
-      {isAdmin && <CombatTimingPanel />}
+      {isAdmin && <EngineSessionInspector status={combat2StatusPresentation.label}
+        encounterId={combat2.encounterId} tick={activeCombat2Presentation?.encounterTick ?? null}
+        cursor={combat2.delivery.lastAppliedTick} character={presentedCharacter}
+        reservedCp={authoritativeCombat2ReservedCp} actionsReady={combat2.actionsReady} />}
 
       {/* Movement Pad — tablet only */}
       {isTablet && <MovementPad currentNode={movementCurrentNode} onMove={handleMovementInput} disabled={movementInputDisabled} unlockedConnections={unlockedConnections} />}

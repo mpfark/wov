@@ -21,7 +21,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { AlertTriangle, Loader2 } from 'lucide-react';
-import { getKnownAbilityMechanics } from '@/features/combat/utils/class-abilities';
+import { getKnownAbilityMechanics } from '@/features/combat2/ui/class-abilities';
 import { suggestAbilityKey } from '@/shared/config/class-authoring';
 import { ACTIVATION_MODES, TARGET_TYPES, TRIGGER_TYPES } from './ability-taxonomy';
 
