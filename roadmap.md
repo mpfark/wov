@@ -18,4 +18,4 @@ Plan: .lovable/plan/wov-classic-architectural-modernization-plan-2026-11-09.md
 - [x] Live full-fight check (2026-11-10): Proving Ground arena, F10-Leader vs low creature, 7 rounds committed by new engine, encounter ended (character died, creature 80->71). World closed: maintenance, asleep, scheduler off.
 - [x] Phase 2c (2026-11-10): combat formulas moved into `src/shared/combat2/rules/`; old formula/Combat1 paths are re-export shims; workers import only engine files (+ status contract), enforced by edge-mirror test. Workers redeployed.
 
-- [ ] Phase 2d: move authored status rules and catalog preparation into the engine; enforce complete worker dependency isolation, test, deploy both workers and record evidence (Mik 2026-11-10).
+- [x] Phase 2d: move authored status rules and catalog preparation into the engine; enforce complete worker dependency isolation, test, deploy both workers and record evidence (Mik 2026-11-10).
