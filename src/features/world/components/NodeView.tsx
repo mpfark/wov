@@ -10,6 +10,7 @@ import { getCharacterTitle } from '@/lib/game-data';
 import type { ClassAbility } from '@/features/combat2/ui/class-abilities';
 import type { ReservedBuffsMap } from '@/features/combat2/ui/stances';
 import { EngineActionBar } from '@/features/combat2/ui/EngineActionBar';
+import { EngineCreatureRoster } from '@/features/combat2/ui/EngineCreatureRoster';
 import type { ActionBindings } from '@/features/world';
 import { nodeServiceMarkers } from '@/features/world/utils/service-registry';
 
@@ -304,7 +305,13 @@ export default function NodeView({
                       {rosterError ? ` (${rosterError})` : ''}
                     </p>
                   )}
-                  {creatures.map(c => {
+                  {authoritativeTargetSelection ? <EngineCreatureRoster creatures={creatures}
+                    rosterActionable={rosterActionable} selectedTargetId={selectedTargetId}
+                    activeTargetId={activeCombatCreatureId} engagedIds={engagedCreatureIds}
+                    pendingTargetId={pendingBasicAttackTargetId} hpOverrides={creatureHpOverrides}
+                    effects={authoritativeCreatureEffects} telegraphs={authoritativeTelegraphs}
+                    tankByLife={authoritativeTankByCreatureLife} encounterTick={authoritativeEncounterTick}
+                    flashingIds={flashingIds} onSelectTarget={onSelectTarget} onAttack={onAttack} /> : creatures.map(c => {
                     const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
                     const isEngaged = authoritativeTargetSelection
                       ? engagedCreatureIds.includes(c.id)

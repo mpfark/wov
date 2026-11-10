@@ -33,7 +33,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, ChevronDown, Loader2, Plus, Save } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ChevronDown, Loader2, Plus, Save } from 'lucide-react';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -145,6 +145,7 @@ export default function AbilityConfigManager() {
   const [statusFilter, setStatusFilter] = useState<typeof STATUS_FILTERS[number]>('all');
   const [creatingBase, setCreatingBase] = useState(false);
   const [creatingAbility, setCreatingAbility] = useState(false);
+  const [mobilePane, setMobilePane] = useState<'bases' | 'abilities' | 'editor'>('bases');
 
   const [sampleLevel, setSampleLevel] = useState(20);
   const [sampleMod, setSampleMod] = useState(4);
@@ -256,6 +257,7 @@ export default function AbilityConfigManager() {
   const select = useCallback((row: AuthoredAbilityRowState) => {
     setSelectedId(row.id);
     setDraft({ ...row, combat_text: { ...row.combat_text } });
+    setMobilePane('editor');
   }, []);
 
   const sample: CalcInputs = useMemo(() => ({
@@ -387,7 +389,7 @@ export default function AbilityConfigManager() {
   };
 
   return (
-    <div className="h-full flex overflow-hidden" data-testid="ability-library">
+    <div className="h-full min-w-0 flex overflow-hidden" data-testid="ability-library">
       <BaseAbilityCreateDialog
         open={creatingBase}
         onOpenChange={setCreatingBase}
@@ -409,7 +411,7 @@ export default function AbilityConfigManager() {
 
       {/* Column 1 — base abilities */}
       <div
-        className="w-64 shrink-0 border-r border-border min-h-0 flex flex-col"
+        className={`w-full lg:w-64 shrink-0 border-r border-border min-h-0 flex-col ${mobilePane === 'bases' ? 'flex' : 'hidden lg:flex'}`}
         data-testid="base-ability-column"
       >
         <div className="p-3 space-y-2 border-b border-border/60">
@@ -441,14 +443,15 @@ export default function AbilityConfigManager() {
             {visibleBases.map(base => {
               const count = countForBase(base.id);
               return (
-                <button
+                <Button variant="ghost"
                   key={base.id}
                   onClick={() => {
                     setSelectedBaseId(base.id);
                     setSelectedId(null);
                     setDraft(null);
+                    setMobilePane('abilities');
                   }}
-                  className={`w-full text-left px-2 py-1.5 rounded border text-xs transition-colors ${
+                  className={`h-auto block whitespace-normal w-full text-left px-2 py-1.5 rounded border text-xs transition-colors ${
                     selectedBaseId === base.id
                       ? 'border-primary bg-primary/10'
                       : 'border-border/60 hover:bg-muted/40'
@@ -463,7 +466,7 @@ export default function AbilityConfigManager() {
                     {count === 0 ? 'no abilities yet' : `${count} ability${count === 1 ? '' : 's'}`}
                     {base.trigger_type !== 'none' ? ` · ${TRIGGER_LABELS[base.trigger_type]}` : ''}
                   </span>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -472,11 +475,15 @@ export default function AbilityConfigManager() {
 
       {/* Column 2 — class abilities authored on the selected base */}
       <div
-        className="w-64 shrink-0 border-r border-border min-h-0 flex flex-col"
+        className={`w-full lg:w-64 shrink-0 border-r border-border min-h-0 flex-col ${mobilePane === 'abilities' ? 'flex' : 'hidden lg:flex'}`}
         data-testid="class-variant-column"
       >
         <div className="p-3 border-b border-border/60 space-y-2">
-          <p className="text-xs font-display">Abilities</p>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="lg:hidden h-7 w-7" aria-label="Back to base abilities" onClick={() => setMobilePane('bases')}><ArrowLeft className="h-4 w-4" /></Button>
+            <p className="text-xs font-display">Abilities</p>
+            {selectedBase && <Button size="sm" variant="outline" className="ml-auto lg:hidden text-[10px]" onClick={() => { setDraft(null); setMobilePane('editor'); }}>Edit base</Button>}
+          </div>
           <p className="text-[10px] text-muted-foreground">
             {selectedBase
               ? `Built on ${selectedBase.label}`
@@ -521,10 +528,10 @@ export default function AbilityConfigManager() {
               const used = usageFor(row.id);
               const classes = Array.from(new Set(used.map(u => CLASS_LABELS[u.class_key] ?? u.class_key)));
               return (
-                <button
+                <Button variant="ghost"
                   key={row.id}
                   onClick={() => select(row)}
-                  className={`w-full text-left px-2 py-1.5 rounded border text-xs transition-colors ${
+                  className={`h-auto block whitespace-normal w-full text-left px-2 py-1.5 rounded border text-xs transition-colors ${
                     selectedId === row.id
                       ? 'border-primary bg-primary/10'
                       : 'border-border/60 hover:bg-muted/40'
@@ -541,7 +548,7 @@ export default function AbilityConfigManager() {
                   <span className="block text-[10px] text-muted-foreground">
                     {classes.length === 0 ? 'unassigned' : classes.join(', ')}
                   </span>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -549,8 +556,12 @@ export default function AbilityConfigManager() {
       </div>
 
       {/* Column 3 — configuration */}
-      <div className="flex-1 min-h-0" data-testid="configuration-column">
-        <ScrollArea className="h-full">
+      <div className={`flex-1 min-w-0 min-h-0 ${mobilePane === 'editor' ? 'block' : 'hidden lg:block'}`} data-testid="configuration-column">
+        <div className="lg:hidden flex items-center gap-2 border-b border-border p-2">
+          <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Back to abilities" onClick={() => setMobilePane('abilities')}><ArrowLeft className="h-4 w-4" /></Button>
+          <span className="min-w-0 break-words text-xs font-display">{draft?.label ?? selectedBase?.label ?? 'Configuration'}</span>
+        </div>
+        <ScrollArea className="h-[calc(100%-3rem)] lg:h-full">
           {!draft && !selectedBase && (
             <div className="p-6 max-w-xl space-y-2">
               <p className="text-sm font-display">Ability library</p>
@@ -588,7 +599,7 @@ export default function AbilityConfigManager() {
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
                     <div className="col-span-2 space-y-1">
                       <Label className="text-[11px]">Label</Label>
                       <Input value={draft.label} onChange={e => setDraft({ ...draft, label: e.target.value })} className="h-8 text-xs" />

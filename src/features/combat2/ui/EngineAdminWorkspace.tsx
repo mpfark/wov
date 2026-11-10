@@ -7,8 +7,10 @@ import StatusManager from '@/components/admin/StatusManager';
 import ClassConfigManager from '@/components/admin/ClassConfigManager';
 
 /** One engine workspace, reusing the installed arena and configured authoring boundaries. */
-export default function EngineAdminWorkspace() {
-  const [tab, setTab] = useState('arena');
+export type EngineAdminTab = 'arena' | 'abilities' | 'statuses' | 'classes';
+
+export default function EngineAdminWorkspace({ initialTab = 'arena' }: { initialTab?: EngineAdminTab }) {
+  const [tab, setTab] = useState<string>(initialTab);
   return <Tabs value={tab} onValueChange={setTab} className="flex flex-col flex-1 min-h-0 h-full">
     <header className="border-b border-border px-3 py-3 flex flex-wrap items-center gap-3">
       <h1 className="font-display text-lg flex items-center gap-2"><Activity className="h-5 w-5 text-primary" />Game Engine</h1>
