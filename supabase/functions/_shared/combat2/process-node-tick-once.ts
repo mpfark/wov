@@ -4,6 +4,7 @@ import * as playerCatalog from './catalog.ts';
 import { decodeClaim } from './decode.ts';
 import type { ClaimDecodeResult } from './decode.ts';
 import * as resolver from './resolver.ts';
+import * as engine from './engine.ts';
 import type { AuthoredAbilityRecord, CatalogRejection } from './catalog.ts';
 import type { BossCastRejection } from './boss-catalog.ts';
 import type { ProposedTick } from './types.ts';
@@ -188,7 +189,7 @@ export async function processNodeTickOnce(
 
   let proposal: ProposedTick;
   try {
-    proposal = (dependencies.resolve ?? resolver.resolveNodeTick)(bosses.snapshot, { abilities: abilities.specs });
+    proposal = (dependencies.resolve ?? engine.step)(bosses.snapshot, { abilities: abilities.specs });
   } catch (error) {
     return { ok: false, kind: 'resolver_failed', diagnostic: safeError(error) };
   }
