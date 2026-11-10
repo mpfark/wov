@@ -306,7 +306,7 @@ export default function NodeView({
                     </p>
                   )}
                   {authoritativeTargetSelection ? <EngineCreatureRoster creatures={creatures}
-                    rosterActionable={rosterActionable} selectedTargetId={selectedTargetId}
+                    rosterActionable={rosterActionable} playerAlive={character.hp > 0} selectedTargetId={selectedTargetId}
                     activeTargetId={activeCombatCreatureId} engagedIds={engagedCreatureIds}
                     pendingTargetId={pendingBasicAttackTargetId} hpOverrides={creatureHpOverrides}
                     effects={authoritativeCreatureEffects} telegraphs={authoritativeTelegraphs}
