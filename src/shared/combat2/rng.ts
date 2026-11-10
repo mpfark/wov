@@ -12,7 +12,7 @@
  * runtime. Only `weightedPick` — which has no retained equivalent — lives here.
  */
 
-import { tickPick, tickRoll, tickSample, type TickRngContext } from '../combat/tick-rng';
+import { tickPick, tickRoll, tickSample, type TickRngContext } from './rules/tick-rng';
 
 export interface TickSeed {
   encounterId: string;
