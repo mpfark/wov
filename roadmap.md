@@ -12,3 +12,6 @@ Plan: .lovable/plan/wov-classic-architectural-modernization-plan-2026-11-09.md
 - [x] Decide: deploy newer tested combat source to Edge — approved by Mik (2026-11-10)
 - [x] Synchronize Combat2 mirror, run focused combat/worker tests, deploy only both Combat2 workers, record refusals and release evidence (613 tests; live GET405/POST401)
 - [ ] Phases 2–8 per plan
+
+- [x] Phase 2a: engine entry point `src/shared/combat2/engine.ts` (step / applyTick / advance); golden fights now run through it (2026-11-10). Worker copy generated, not deployed.
+- [ ] Phase 2b: switch live workers to `engine.step` and deploy — waits on Mik's deploy approval.
