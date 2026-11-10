@@ -10,6 +10,14 @@ Current E/F rollout (2026-10-22): owner and published Lovable reports confirm 00
 
 ## Now — engine stabilization
 
+### ENG-MODERNIZE-005 — Retire alternative combat screens
+
+- **Engine area / status:** combat presentation and reconnect recovery; `implemented_source`.
+- **Outcome:** all node creature screens use engine roster; pending abilities, active attack target, commit timing and reservations read Combat2; alternative legacy death/timing screens removed and audit entry delegates to engine workspace. Owner-read dead HP enables existing respawn after reconnect without an encounter snapshot, preserving arena exclusion.
+- **Verification:** engine command/recovery and node integration tests; ordinary-world walk, natural fight through terminal death, normal respawn and safe shutdown. Exact installed/runtime evidence in project state.
+- **Preserved / remaining:** rules, one heartbeat, database, workers, stored history and shared-domain orchestration unchanged. No generic-command migration, class-ability/multiplayer acceptance, broad legacy directory/table deletion or automatic publication claimed.
+- **Specification sections:** Engine principles and authority; Character ownership and lifecycle; Creatures, targeting and initiation; Failure, diagnostics and verification. Rules preserved.
+
 ### ENG-MODERNIZE-004 — Player entry and arena recovery integration
 
 - **Engine area / status:** player entry and bounded arena-admin recovery; `implemented_source`.

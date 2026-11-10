@@ -15,6 +15,10 @@ export interface Combat2ClientSessionProps {
   classKey?: string;
   nodeId: string | null;
   hasLivingCreatures: boolean | null;
+  /** Current owner-read character HP covers reconnect without an encounter snapshot. */
+  characterHp?: number;
+  recoveryEnabled?: boolean;
+  arenaNode?: boolean;
   departurePending?: boolean;
 }
 
@@ -51,11 +55,11 @@ export function useCombat2ClientSession(props: Combat2ClientSessionProps) {
     if (durabilityCommitted) window.dispatchEvent(new Event('inventory:changed'));
   }, [delivery.batches, delivery.lastAppliedTick, enteredSessionKey]);
   const model = presentation.model;
-  const dead = !!model && (model.character.hp <= 0 || model.fighterExitState === 'dead');
+  const dead = model ? model.character.hp <= 0 || model.fighterExitState === 'dead' : props.characterHp === 0;
   const testArenaDeath = dead
-    && (delivery.snapshot?.encounter as Record<string, unknown> | null | undefined)?.test_arena_id != null;
+    && (props.arenaNode === true || (delivery.snapshot?.encounter as Record<string, unknown> | null | undefined)?.test_arena_id != null);
   const respawn = useCombat2RespawnSession({
-    enabled: props.enabled,
+    enabled: props.recoveryEnabled ?? props.enabled,
     canSubmit: props.controlled ? dead && !testArenaDeath && !props.inputLocked : dead,
     characterId: props.characterId,
     nodeId: props.nodeId,

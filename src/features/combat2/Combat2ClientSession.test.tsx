@@ -13,6 +13,14 @@ const ENCOUNTER_2 = 'bbbbbbbb-0000-4000-8000-000000000002';
 afterEach(() => vi.restoreAllMocks());
 
 describe('Combat2ClientSession application bridge', () => {
+  it('recovers a dead owner-read character after reconnect without an active encounter', async () => {
+    const rpc = vi.spyOn(supabase,'rpc').mockResolvedValue({data:{ok:true,kind:'respawned',destination_node_id:NODE_2,restored_hp:16,gold_lost:20},error:null} as never);
+    const view=renderHook(()=>useCombat2ClientSession({enabled:false,recoveryEnabled:true,controlled:true,characterId:CHARACTER,nodeId:NODE,characterHp:0,hasLivingCreatures:false}));
+    expect(view.result.current.dead).toBe(true);
+    await act(async()=>{await view.result.current.respawn.submit();});
+    expect(rpc).toHaveBeenCalledWith('combat2_respawn',expect.objectContaining({_character_id:CHARACTER}));
+    view.unmount();
+  });
   it('does zero entry and delivery work while the shared gate is disabled', () => {
     const rpc = vi.spyOn(supabase, 'rpc');
     const channel = vi.spyOn(supabase, 'channel');

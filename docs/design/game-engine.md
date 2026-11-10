@@ -52,6 +52,8 @@ The engine creature roster separates selection from attack, uses the current act
 
 Player entry redirects unselected accounts to character selection, fences resource preparation by character/arena generation and offers explicit retry on refusal rather than claiming readiness. Arena admin reset/relocation may move another owner's enrolled tester only through the existing authorized admin relocation lane to that tester's verified active arena destination; ordinary ownership, departure and respawn gates remain unchanged. These are integration corrections, not gameplay-rule or permission-policy expansion.
 
+Combat presentation now has one engine screen path for every node: creature selection, attacks, effects, telegraphs, reservations, pending abilities and active target use engine projections. The alternative legacy creature/death/timing screens are retired; the historical audit entry delegates to Game Engine without legacy trace queries or toggles. A dead owner-read character can reach the existing authoritative respawn command after reconnect even without an active encounter projection or ordinary combat access; arena deaths remain arena-controlled. This preserves server validation and all gameplay/heartbeat rules. Fenced legacy orchestration helpers serving remaining shared domains are not deleted by presentation retirement.
+
 - Gameplay is server-authoritative. Clients submit intentions and render authoritative results.
 - Browsers never author persistent HP, CP, MP, position, damage, rewards or effects.
 - Resolution is deterministic from a claimed snapshot. Durable request IDs, idempotency, atomic commits and stale-state fences prevent duplicate damage, costs, movement, rewards and effects.
