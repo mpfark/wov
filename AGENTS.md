@@ -19,4 +19,4 @@ Lovable's standard custom-SQL Drizzle tool owns migration registration and the o
 ## Modernization (approved 2026-11-09)
 Gameplay rules move to one pure TypeScript engine; SQL keeps storage, ownership and atomic commits, and new player actions go through one generic command pipeline instead of per-action request tables — this keeps routine features to a few files. Engine-only TypeScript changes are verified by tests (including the Combat2 golden master in `src/shared/combat2/__tests__/golden-master.test.ts`), not per-change hash/ACL preflights; schema and privilege changes keep the full handoff process.
 
-Generate Combat2 Edge modules from canonical src/shared/combat2 with only Deno import-extension rewriting; the edge-mirror test prevents tested and deployed rules from diverging.
+Generate Combat2 Edge modules from canonical src/shared/combat2 with only Deno import-extension rewriting; the edge-mirror test prevents tested and deployed rules from diverging. Combat formulas live in src/shared/combat2/rules; src/shared/formulas and combat/tick-rng, combat/pure/party-xp are re-export shims so the worker bundle reaches only engine code.
