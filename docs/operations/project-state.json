@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-10T22:52:57Z",
+  "updated_at": "2026-11-10T22:58:13Z",
   "based_on_source_sha": "e1faa06b4fbf59d723636bde74af6abd503609a2",
   "status_vocabulary": [
     "authored",
@@ -831,6 +831,17 @@
     "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails."
   },
   "combat2_operational_work": [
+    {
+      "identity": "ENG-MODERNIZE-003 \u2014 Mik admin enabled; live arena reset refused",
+      "status": "blocked",
+      "sha": "5d0c314b8fa52487b4f5c00d164601aa08ddd690",
+      "timestamp": "2026-11-10T22:58:13Z",
+      "evidence_type": "cloud_inspection",
+      "reporting_actor": "Lovable; Mik explicit account grant and live-fight authorization",
+      "directly_verified": true,
+      "artifact": "docs/operations/combat2-engine-admin-live-check-2026-11-10.md",
+      "evidence": "Verified requester Auth UUID be789426-4437-4958-901b-1a8e43fbb155 matched Mik account and held player role. Narrow user_roles update player->steward performed and read back; no RLS/function/role policy or other account change. Browser authenticated /admin succeeds; Game Engine Test Arena and configured Abilities render; desktop screenshots inspected, mobile workspace header fits but existing three-column ability library is horizontally clipped (not fixed in this permission/runtime task). Approved disposable F10-Leader tester session minted; Mik admin attempted combat2_test_reset with stable request838652e1-59a6-4cd1-8ec5-917afc1d2784. Result reset_failed/tester_restore/P0001. Installed location trigger checks NEW.user_id=auth.uid even for admin-authorized relocation; reset updates another account tester, so ownership mismatch is the source-backed diagnosis (exact exception suppressed by reset). No trigger bypass, direct revive, service-role impersonation or schema mutation. Full live fight not performed. Fresh read confirms tester still0/16HP in low arena, world asleep, combat maintenance, scheduler0, active encounters0 and recording runs0; reset transaction rollback retains encounter. Prior completed reports preserved. Source rules/heartbeat/Edge/frontend unchanged; no publication. Next prerequisite is separately reviewed and authorized narrow arena-admin reset/location integration correction; full-fight acceptance remains open."
+    },
     {
       "identity": "ENG-MODERNIZE-003 \u2014 engine-owned admin and player screens",
       "status": "ready_for_manual_publish",
