@@ -8481,6 +8481,15 @@ export type Database = {
         Args: { _character_id: string; _new_hp: number }
         Returns: undefined
       }
+      user_can_see_encounter: {
+        Args: { _encounter_id: string }
+        Returns: boolean
+      }
+      user_has_character: { Args: never; Returns: boolean }
+      user_has_character_at_node: {
+        Args: { _node_id: string }
+        Returns: boolean
+      }
       validate_ability_calc: {
         Args: { _calc: Json; _depth?: number; _label: string }
         Returns: string
