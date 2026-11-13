@@ -238,7 +238,7 @@ export function useCharacter(user: User | null) {
         });
         return next.length === previous.length && next.every((row, i) => row === previous[i]) ? previous : next;
       });
-      setResourceDelivery(previous => source === 'poll' && previous.status === 'current' ? previous : ({ status: 'current', lastAuthoritativeAt: Date.now(), source,
+      setResourceDelivery(previous => ({ status: 'current', lastAuthoritativeAt: Date.now(), source,
         readStartedAt: (resourceRevisionRef.current.get(selectedCharacterIdRef.current ?? '') ?? 0) > fetchStartedAtResourceRevision
           ? previous.readStartedAt : readStartedAt }));
     } else if (activeUserIdRef.current === userId && error) {
