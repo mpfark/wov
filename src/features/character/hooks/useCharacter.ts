@@ -91,7 +91,24 @@ export interface CharacterResourceDeliveryState {
   source: 'initial' | 'realtime' | 'poll' | 'focus' | 'reconnect' | null;
 }
 
-const RESOURCE_REFRESH_MS = 4000;
+/** Safety-net poll while the realtime row feed is healthy; realtime carries routine changes. */
+const RESOURCE_REFRESH_MS = 15000;
+/** Faster poll only while the realtime feed is down. */
+const RESOURCE_REFRESH_DEGRADED_MS = 4000;
+
+/** Shallow row equality so unchanged polls keep object identity and skip re-renders. */
+export function sameCharacterRow(a: Character, b: Character): boolean {
+  if (a === b) return true;
+  const ka = Object.keys(a); const kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  for (const k of ka) {
+    const va = (a as any)[k]; const vb = (b as any)[k];
+    if (va === vb) continue;
+    if (va && vb && typeof va === 'object' && JSON.stringify(va) === JSON.stringify(vb)) continue;
+    return false;
+  }
+  return true;
+}
 
 export function useCharacter(user: User | null) {
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -158,7 +175,7 @@ export function useCharacter(user: User | null) {
     const fetchStartedAtResourceRevision = resourceRevisionCounterRef.current;
     const readStartedAt = Date.now();
     const source = fetchSourceRef.current;
-    setResourceDelivery(previous => ({ ...previous, status: previous.lastAuthoritativeAt ? 'refreshing' : 'connecting' }));
+    if (source !== 'poll') setResourceDelivery(previous => ({ ...previous, status: previous.lastAuthoritativeAt ? 'refreshing' : 'connecting' }));
     const { data, error } = await supabase
       .from('characters')
       .select('*')
@@ -203,12 +220,13 @@ export function useCharacter(user: User | null) {
         if (!fetchedIds.has(id)) heldFieldsRef.current.delete(id);
       }
 
-      setCharacters(previous => rows.map(incoming => {
+      setCharacters(previous => {
+        const next = rows.map(incoming => {
         const locationChangedAfterFetchStarted = (locationRevisionRef.current.get(incoming.id) ?? 0) > fetchStartedAtLocationRevision;
         const current = previous.find(character => character.id === incoming.id);
         if (!current) return incoming;
         const resourceChangedAfterFetchStarted = (resourceRevisionRef.current.get(incoming.id) ?? 0) > fetchStartedAtResourceRevision;
-        return { ...incoming,
+        const merged = { ...incoming,
           ...(locationChangedAfterFetchStarted ? { current_node_id: current.current_node_id } : {}),
           // A read begun before a newer realtime delivery cannot roll resources back.
           ...(resourceChangedAfterFetchStarted ? {
@@ -216,7 +234,10 @@ export function useCharacter(user: User | null) {
             mp: current.mp, max_mp: current.max_mp,
           } : {}),
         };
-      }));
+        return sameCharacterRow(current, merged) ? current : merged;
+        });
+        return next.length === previous.length && next.every((row, i) => row === previous[i]) ? previous : next;
+      });
       setResourceDelivery(previous => ({ status: 'current', lastAuthoritativeAt: Date.now(), source,
         readStartedAt: (resourceRevisionRef.current.get(selectedCharacterIdRef.current ?? '') ?? 0) > fetchStartedAtResourceRevision
           ? previous.readStartedAt : readStartedAt }));
@@ -276,6 +297,8 @@ export function useCharacter(user: User | null) {
     // Skip refetch on token refreshes — realtime subscription keeps state in sync
     // and refetching would revert optimistic regen updates (HP/CP/MP).
 
+    let realtimeHealthy = false;
+    let lastPollAt = Date.now();
     const channel = supabase
       .channel('my-characters')
       .on('postgres_changes', {
@@ -333,10 +356,12 @@ export function useCharacter(user: User | null) {
       .subscribe((status) => {
         if (activeUserIdRef.current !== user.id) return;
         if (status === 'SUBSCRIBED') {
+          realtimeHealthy = true;
           setResourceDelivery(previous => ({ ...previous, status: previous.lastAuthoritativeAt ? 'current' : 'connecting' }));
           fetchSourceRef.current = 'reconnect';
           void fetchCharactersRef.current();
         } else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) {
+          realtimeHealthy = false;
           setResourceDelivery(previous => ({ ...previous, status: previous.lastAuthoritativeAt ? 'stale' : 'disconnected' }));
         }
       });
@@ -346,7 +371,12 @@ export function useCharacter(user: User | null) {
       fetchSourceRef.current = source;
       void fetchCharactersRef.current();
     };
-    const poll = window.setInterval(() => refresh('poll'), RESOURCE_REFRESH_MS);
+    const poll = window.setInterval(() => {
+      const due = realtimeHealthy ? RESOURCE_REFRESH_MS : RESOURCE_REFRESH_DEGRADED_MS;
+      if (Date.now() - lastPollAt < due) return;
+      lastPollAt = Date.now();
+      refresh('poll');
+    }, RESOURCE_REFRESH_DEGRADED_MS);
     const onFocus = () => refresh('focus');
     const onVisible = () => { if (document.visibilityState === 'visible') refresh('focus'); };
     const onOnline = () => refresh('reconnect');
