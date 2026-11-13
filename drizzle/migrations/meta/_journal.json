@@ -239,6 +239,13 @@
       "when": 1794352722541,
       "tag": "0033_combat2_arena_admin_recovery",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794564871767,
+      "tag": "0034_scope_shared_game_read_policies",
+      "breakpoints": true
     }
   ]
 }
