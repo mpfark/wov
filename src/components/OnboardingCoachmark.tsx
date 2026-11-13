@@ -117,7 +117,7 @@ export function OnboardingCoachmark({ targetId, title, body, delayMs = 1200, ena
       <div
         className="fixed z-[61] surface-raised rounded-md p-3 shadow-lg border border-border"
         style={{ top, left, width: calloutW }}
-        role="dialog"
+        role="note"
         aria-label={title}
       >
         <div
