@@ -23,7 +23,7 @@ function request(body: string | null = '{}', authorization = `Bearer ${WORKER_SE
 }
 
 function setup(candidates: unknown[] = [], sessions: unknown[] = []) {
-  const rpc = vi.fn(async (name: string, _args: Record<string, unknown>) => name === 'combat2_due_nodes'
+  const rpc = vi.fn(async (name: string, _args: Record<string, unknown>) => name === 'combat2_due_nodes_claim_first'
     ? { data: { ok: true, kind: 'candidates', candidates }, error: null }
     : name === 'combat2_diagnostic_sessions_for_candidates' ? {data:sessions,error:null}
     : { data: {ok:true,kind:'recorded'}, error: null });
@@ -76,7 +76,7 @@ describe('combat2-dispatch-once Edge handler', () => {
     const response = await fixture.handler(request(body));
     expect(response.status).toBe(200);
     expect(fixture.rpc).toHaveBeenCalledOnce();
-    expect(fixture.rpc).toHaveBeenCalledWith('combat2_due_nodes', { _limit: 10 });
+    expect(fixture.rpc).toHaveBeenCalledWith('combat2_due_nodes_claim_first', { _limit: 10, _lease_ms: 5000 });
     expect(fixture.process).not.toHaveBeenCalled();
   });
 
@@ -120,7 +120,7 @@ describe('combat2-dispatch-once Edge handler', () => {
   it('isolates heartbeat persistence failure from a completed dispatch', async () => {
     const fixture = setup();
     fixture.rpc.mockImplementation(async (name: string) => {
-      if (name === 'combat2_due_nodes') return { data: { ok: true, kind: 'candidates', candidates: [] }, error: null };
+      if (name === 'combat2_due_nodes_claim_first') return { data: { ok: true, kind: 'candidates', candidates: [] }, error: null };
       if (name === 'combat2_heartbeat_record_dispatch') throw new Error('diagnostic sink unavailable');
       return { data: [], error: null };
     });
@@ -135,7 +135,7 @@ describe('combat2-dispatch-once Edge handler', () => {
     let finishLookup: ((value: { data: unknown[]; error: null }) => void) | undefined;
     let finishWrite: ((value: { data: unknown[]; error: null }) => void) | undefined;
     fixture.rpc.mockImplementation(async (name: string) => {
-      if (name === 'combat2_due_nodes') return { data: { ok: true, kind: 'candidates', candidates: [row] }, error: null };
+      if (name === 'combat2_due_nodes_claim_first') return { data: { ok: true, kind: 'candidates', candidates: [row] }, error: null };
       return new Promise(resolve => {
         if (name === 'combat2_diagnostic_sessions_for_candidates') finishLookup = resolve;
         else finishWrite = resolve;
@@ -175,7 +175,7 @@ describe('combat2-dispatch-once Edge handler', () => {
       expect(fixture.rpc.mock.calls.some(([name])=>name==='combat2_diagnostic_record_server_events')).toBe(false);
     }
     const failing=setup([row],[{session_id:'x',node_id:NODE,encounter_id:ENCOUNTER}]);
-    failing.rpc.mockImplementation(async(name:string)=>{if(name==='combat2_due_nodes')return{data:{ok:true,kind:'candidates',candidates:[row]},error:null};
+    failing.rpc.mockImplementation(async(name:string)=>{if(name==='combat2_due_nodes_claim_first')return{data:{ok:true,kind:'candidates',candidates:[row]},error:null};
       if(name==='combat2_diagnostic_sessions_for_candidates')return{data:[{session_id:'x',node_id:NODE,encounter_id:ENCOUNTER}],error:null}; throw new Error('sink');});
     const response=await failing.handler(request()); await Promise.all(failing.deferred);
     expect(response.status).toBe(200); expect(failing.process).toHaveBeenCalledOnce();
@@ -223,7 +223,7 @@ describe('combat2-dispatch-once Edge handler', () => {
     const order: string[] = [];
     fixture.rpc.mockImplementation(async (name: string) => {
       order.push(name);
-      if (name === 'combat2_due_nodes') return { data: { ok: true, kind: 'candidates', candidates: [row] }, error: null };
+      if (name === 'combat2_due_nodes_claim_first') return { data: { ok: true, kind: 'candidates', candidates: [row] }, error: null };
       if (name === 'combat2_diagnostic_sessions_for_candidates') {
         return { data: [{ session_id: '20000000-0000-4000-8000-000000000001', node_id: NODE, encounter_id: ENCOUNTER }], error: null };
       }
