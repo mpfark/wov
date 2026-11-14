@@ -1,4 +1,7 @@
 # Roadmap — WoV Classic Modernization
+\n+## Live combat latency — Mik 2026-11-14
+- [ ] Remove non-gameplay database waits and reuse worker HTTP connections; preserve two-second cadence.
+- [ ] Test and deploy both combat workers; measure live phase timings against the 150ms target.
 Plan: .lovable/plan/wov-classic-architectural-modernization-plan-2026-11-09.md
 
 - [x] Phase 0a: repository-based inventory draft (docs/architecture/modernization-phase0-inventory.md)
