@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DISPATCH_LIMIT, dispatchNodeTicksOnce } from '../dispatch-node-ticks-once';
+import { DISPATCH_CONCURRENCY, DISPATCH_LIMIT, dispatchNodeTicksOnce } from '../dispatch-node-ticks-once';
 import type { NodeTickRunResult } from '../process-node-tick-once';
 
 const id = (n: number) => `10000000-0000-4000-8000-${n.toString().padStart(12, '0')}`;
@@ -24,7 +24,7 @@ describe('dispatchNodeTicksOnce', () => {
     expect(out).toMatchObject({ candidateCount: 0, processedCount: 0, summary: {}, moreMayRemain: false });
   });
 
-  it('processes candidates sequentially, once each, in discovery order', async () => {
+  it('starts candidates in discovery order, once each, at the same time', async () => {
     const active = { count: 0, max: 0 };
     const order: string[] = [];
     const processNode = vi.fn(async (nodeId: string): Promise<NodeTickRunResult> => {
@@ -38,7 +38,7 @@ describe('dispatchNodeTicksOnce', () => {
     const rows = [candidate(3), candidate(1), candidate(2)];
     const out = await dispatchNodeTicksOnce({ discoverDueNodes: async () => discovery(rows), processNode });
     expect(order).toEqual(rows.map((row) => row.node_id));
-    expect(active.max).toBe(1);
+    expect(active.max).toBe(3);
     expect(processNode).toHaveBeenCalledTimes(3);
     expect(out).toMatchObject({ candidateCount: 3, processedCount: 3, summary: { not_due: 3 } });
   });
@@ -96,5 +96,22 @@ describe('dispatchNodeTicksOnce', () => {
       nodeId: id(1), classification: 'commit_transport_error', reason: 'worker failed safely', stage: 'commit', code: '23514',
     });
     expect(JSON.stringify(out)).not.toContain('diagnostic');
+  });
+
+  it('a slow node does not delay other nodes, and concurrency stays bounded', async () => {
+    const finished: string[] = [];
+    const active = { count: 0, max: 0 };
+    const rows = Array.from({ length: 8 }, (_, n) => candidate(n + 1));
+    const processNode = vi.fn(async (nodeId: string): Promise<NodeTickRunResult> => {
+      active.count += 1; active.max = Math.max(active.max, active.count);
+      await new Promise((r) => setTimeout(r, nodeId === id(1) ? 40 : 5));
+      active.count -= 1; finished.push(nodeId);
+      return { ok: true, kind: 'not_due', nextDueAt: null };
+    });
+    const out = await dispatchNodeTicksOnce({ discoverDueNodes: async () => discovery(rows), processNode });
+    expect(finished[0]).not.toBe(id(1));
+    expect(finished.at(-1)).toBe(id(1));
+    expect(active.max).toBe(DISPATCH_CONCURRENCY);
+    expect(out.results.map((r) => r.nodeId)).toEqual(rows.map((r) => r.node_id));
   });
 });

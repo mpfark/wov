@@ -1,6 +1,8 @@
 import type { NodeTickRunResult } from './process-node-tick-once';
 
 export const DISPATCH_LIMIT = 10;
+/** Maximum nodes processed at the same time within one heartbeat. */
+export const DISPATCH_CONCURRENCY = 4;
 
 export interface DueNodeCandidate {
   node_id: string;
@@ -57,7 +59,7 @@ function safeWorkerResult(nodeId: string, result: NodeTickRunResult): DispatchNo
   return base;
 }
 
-/** Discover and process one fixed, bounded batch. Never retries or loops. */
+/** Discover and process one fixed, bounded batch concurrently. Never retries or loops. */
 export async function dispatchNodeTicksOnce(deps: DispatchDependencies): Promise<DispatchRunResult> {
   let raw: unknown;
   try {
@@ -94,18 +96,24 @@ export async function dispatchNodeTicksOnce(deps: DispatchDependencies): Promise
     candidates.push(candidate as unknown as DueNodeCandidate);
   }
 
-  const results: DispatchNodeResult[] = [];
-  const summary: Record<string, number> = {};
-  for (const candidate of candidates) {
-    let item: DispatchNodeResult;
-    try {
-      item = safeWorkerResult(candidate.node_id, await deps.processNode(candidate.node_id));
-    } catch {
-      item = { nodeId: candidate.node_id, classification: 'worker_exception', reason: 'worker threw unexpectedly' };
+  // Nodes are independent: each has its own claim lease and atomic commit, so they run
+  // concurrently (bounded) and one busy node never delays another node's round.
+  const results: DispatchNodeResult[] = new Array(candidates.length);
+  let next = 0;
+  const lane = async (): Promise<void> => {
+    while (next < candidates.length) {
+      const index = next++;
+      const candidate = candidates[index];
+      try {
+        results[index] = safeWorkerResult(candidate.node_id, await deps.processNode(candidate.node_id));
+      } catch {
+        results[index] = { nodeId: candidate.node_id, classification: 'worker_exception', reason: 'worker threw unexpectedly' };
+      }
     }
-    results.push(item);
-    summary[item.classification] = (summary[item.classification] ?? 0) + 1;
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(DISPATCH_CONCURRENCY, candidates.length) }, lane));
+  const summary: Record<string, number> = {};
+  for (const item of results) summary[item.classification] = (summary[item.classification] ?? 0) + 1;
 
   return {
     ok: true,
