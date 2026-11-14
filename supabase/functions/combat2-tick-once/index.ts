@@ -16,7 +16,7 @@ import { reusableRpcClient } from "../_shared/combat2-rpc-client.ts";
 const httpClient = Deno.createHttpClient({ poolMaxIdlePerHost: 4, poolIdleTimeout: 90_000 });
 const pooledClient = reusableRpcClient((url, serviceRoleKey) => createClient(url, serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false },
-  global: { fetch: (input, init) => Deno.fetch(input, { ...init, client: httpClient }) },
+  global: { fetch: (input, init) => fetch(input, { ...init, client: httpClient } as RequestInit & { client: Deno.HttpClient }) },
 }));
 
 const handler = createCombat2TickHandler({
