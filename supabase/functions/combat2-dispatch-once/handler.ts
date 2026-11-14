@@ -80,6 +80,8 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
     catch { return failure('environment_failure', 'privileged transport is unavailable', 500); }
 
     const candidatesByNode = new Map<string,string>();
+    /** Claim returned inline with discovery for the first due node; consumed at most once. */
+    let inlineClaim: { nodeId: string; claim: unknown } | null = null;
 
     /** Start session capture before combat, but never wait for diagnostics to run combat. */
     const relevantSessions = async (nodeId: string, encounterId?: string): Promise<DiagnosticSession[]> => {
@@ -124,9 +126,11 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
 
     const result = await dispatchNodeTicksOnce({
       async discoverDueNodes(limit) {
-        const { data, error } = await client.rpc('combat2_due_nodes', { _limit: limit });
+        const { data, error } = await client.rpc('combat2_due_nodes_claim_first', { _limit: limit, _lease_ms: 5000 });
         if (error) throw new Error(`combat2_due_nodes failed: ${error.code ?? 'database_error'}`);
-        const envelope=data as {candidates?:Array<{node_id?:unknown;encounter_id?:unknown}>};
+        const envelope=data as {candidates?:Array<{node_id?:unknown;encounter_id?:unknown}>;first_claim?:{node_id?:unknown;claim?:unknown}};
+        const first=object(envelope?.first_claim);
+        if(first&&typeof first.node_id==='string'&&first.claim!==undefined) inlineClaim={nodeId:first.node_id,claim:first.claim};
         for(const candidate of envelope?.candidates??[]) if(typeof candidate.node_id==='string'&&typeof candidate.encounter_id==='string') candidatesByNode.set(candidate.node_id,candidate.encounter_id);
         return data;
       },
@@ -148,6 +152,7 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
             ...(heartbeatId === null ? {} : { heartbeat_id: heartbeatId })});},
           transport: {
             async claimNode(id) {
+              if (inlineClaim && inlineClaim.nodeId === id) { const claim = inlineClaim.claim; inlineClaim = null; return claim; }
               const { data, error } = await client.rpc('node_tick_claim', { _node_id: id });
               if (error) throw Object.assign(new Error('database transport failed'), { code: error.code });
               return data;

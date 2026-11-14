@@ -1,6 +1,6 @@
 # Handoff: merged due-fights + first lock (ENG-PERF, prepared 2026-11-14)
 
-Status: prepared only. SQL not installed, workers not changed or deployed, frontend unaffected.
+Status: installed (migration 0035), combat2-dispatch-once deployed, live fight verified 2026-11-14 (median round 62 ms).
 
 ## Why
 A fight round makes three database trips: `combat2_due_nodes`, `node_tick_claim`, `node_tick_commit` (~70 ms each; median round ~200 ms, see combat2-latency-2026-11-14.md). Definitions are already bundled in the worker, so caching cannot remove a trip. Merging discovery with the first claim removes one trip for the common single-fight heartbeat (expected median ~130 ms).

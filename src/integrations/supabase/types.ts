@@ -7323,6 +7323,10 @@ export type Database = {
         Returns: Json
       }
       combat2_due_nodes: { Args: { _limit?: number }; Returns: Json }
+      combat2_due_nodes_claim_first: {
+        Args: { _lease_ms?: number; _limit?: number }
+        Returns: Json
+      }
       combat2_due_nodes_without_canary_gate: {
         Args: { _limit?: number }
         Returns: Json
