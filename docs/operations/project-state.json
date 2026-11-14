@@ -3137,7 +3137,7 @@
       "reporting_actor": "Lovable; Mik approved steps 1-3",
       "directly_verified": true,
       "artifact": "migration drizzle/0035_combat2_due_nodes_claim_first.sql; combat2-dispatch-once source_sha256 56e1306aa97a757009b18d02ac298162074ee2e7c069064c3120966cd7ce4930; live fight heartbeats 66974-66982 round times 42-158 ms (median 62 ms), inline claim ~0.06 ms",
-      "evidence": "Dedicated codex/combat2-targeting-hp-presentation from current main. Enemy ability buttons use selected living creature rather than saved ally target; ally/self paths retained. Bounded backend refusal codes preserved and displayed without relaxing readiness. Cached creature names render immediately while numeric HP waits for current-node roster or valid combat projection. Node/request checks fence late roster responses/cache updates; GamePage overrides require same current-node identity and spawn. Loading diagnostic values are null; no client regeneration/polling/authoritative changes.185 focused frontend checks PASS; root and app TypeScript and build PASS (large-chunk advisory), documentation/state/source preservation checks pass. Existing movement/combat/CP/target/stance gates retained. No independent live Judgment root cause or server-settlement timing proven. Frontend-only; SQL/Edge N/A; owner review/merge and Mik manual Publish/live verification pending. Prior accepted risks/controls/closures/admin XP pause preserved."
+      "evidence": "Function present with service_role-only execute (read role denied); 79 focused tests passed; dispatch logs 2026-11-14 16:58 show claim_acquired in ~0.06 ms from inline claim and 9 consecutive rounds 42-158 ms."
     }
   ],
   "known_blockers": [
