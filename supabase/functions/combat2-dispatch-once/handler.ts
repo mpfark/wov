@@ -3,6 +3,7 @@ import type { AppliedStatusRow } from '../_shared/combat2/engine.ts';
 import { dispatchNodeTicksOnce, DISPATCH_LIMIT, type DispatchRunResult } from '../_shared/combat2/dispatch-node-ticks-once.ts';
 import { PROPOSAL_FIELDS, type CommitTickArgs, type NodeTickRunResult, type ProcessNodeTickDependencies } from '../_shared/combat2/process-node-tick-once.ts';
 import { bearerToken, constantTimeSecretEqual, redact } from '../_shared/combat2-internal-edge-auth.ts';
+import { roundTiming } from '../_shared/combat2-rpc-client.ts';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -80,11 +81,7 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
 
     const candidatesByNode = new Map<string,string>();
 
-    /**
-     * Sessions are resolved BEFORE the worker runs. A worker that rejects or
-     * throws must still leave evidence, and a recording that expires during the
-     * run must not silently discard the phases already collected.
-     */
+    /** Start session capture before combat, but never wait for diagnostics to run combat. */
     const relevantSessions = async (nodeId: string, encounterId?: string): Promise<DiagnosticSession[]> => {
       if (!encounterId) return [];
       try {
@@ -140,7 +137,8 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
         events.push({event_type:'dispatcher_requested',node_id:nodeId,encounter_id:encounterId,outcome:invocationId,elapsed_ms:0,
           ...(heartbeatId === null ? {} : { heartbeat_id: heartbeatId })});
         let lastPhase='dispatcher_requested';
-        const sessions = await relevantSessions(nodeId, encounterId);
+        const sessions = relevantSessions(nodeId, encounterId);
+        const roundStarted = performance.now();
         try {
           const workerResult=await deps.processNodeTickOnce(nodeId, {
           abilityRecords: deps.abilityRecords,
@@ -183,21 +181,26 @@ export function createCombat2DispatchHandler(deps: Combat2DispatchHandlerDepende
             ...(heartbeatId === null ? {} : { heartbeat_id: heartbeatId })});
           throw error;
         } finally {
-          persistEvidence(sessions, events);
+          deps.log?.('[combat2-round] timing', {
+            heartbeatId, nodeId, ...roundTiming(performance.now() - roundStarted),
+            phases: events.filter(event => event.event_type !== 'dispatcher_requested')
+              .map(event => ({ phase: event.event_type, elapsedMs: event.elapsed_ms, outcome: event.outcome })),
+          });
+          const evidence = sessions.then(found => persistEvidence(found, events)).catch(() => undefined);
+          if (deps.defer) deps.defer(evidence); else void evidence;
         }
       },
     });
 
     if (heartbeatId !== null) {
-      try {
-        await client.rpc('combat2_heartbeat_record_dispatch', {
+      const work = Promise.resolve().then(() => client.rpc('combat2_heartbeat_record_dispatch', {
           _heartbeat_id: heartbeatId,
           _classification: result.classification,
           _candidate_count: result.candidateCount,
           _processed_count: result.processedCount,
           _more_may_remain: result.moreMayRemain,
-        });
-      } catch { /* heartbeat diagnostics never change dispatcher gameplay */ }
+        })).catch(() => undefined);
+      if (deps.defer) deps.defer(work); else void work;
     }
 
     deps.log?.('[combat2-dispatch-once] completed', redact({

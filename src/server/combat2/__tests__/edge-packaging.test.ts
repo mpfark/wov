@@ -94,7 +94,8 @@ describe("combat2 Edge packaging", () => {
         const allowedInfrastructure = resolve(FUNCTIONS, '_shared/combat2-internal-edge-auth.ts');
         const inEngine = dependency.startsWith(`${COMBAT2_DST}${sep}`);
         const inHandler = ENTRIES.some(entry => dirname(entry) === dirname(dependency));
-        expect(inEngine || inHandler || dependency === allowedInfrastructure,
+        expect(inEngine || inHandler || dependency === allowedInfrastructure ||
+          dependency === resolve(FUNCTIONS, '_shared/combat2-rpc-client.ts'),
           `non-engine dependency: ${relative(ROOT, current)} -> ${specifier}`).toBe(true);
         pending.push(dependency);
       }
