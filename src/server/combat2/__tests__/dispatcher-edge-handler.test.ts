@@ -129,6 +129,27 @@ describe('combat2-dispatch-once Edge handler', () => {
     expect(await response.json()).toMatchObject({ ok: true, heartbeat_id: 9, classification: 'dispatched' });
   });
 
+  it('finishes combat and responds while diagnostic lookup and heartbeat writes are stalled', async () => {
+    const row = { node_id: NODE, encounter_id: ENCOUNTER, next_due_at: '2026-08-31T00:00:00Z' };
+    const fixture = setup([row]);
+    let finishLookup: ((value: { data: unknown[]; error: null }) => void) | undefined;
+    let finishWrite: ((value: { data: unknown[]; error: null }) => void) | undefined;
+    fixture.rpc.mockImplementation(async (name: string) => {
+      if (name === 'combat2_due_nodes') return { data: { ok: true, kind: 'candidates', candidates: [row] }, error: null };
+      return new Promise(resolve => {
+        if (name === 'combat2_diagnostic_sessions_for_candidates') finishLookup = resolve;
+        else finishWrite = resolve;
+      });
+    });
+    const response = await fixture.handler(request('{"heartbeat_id":12}'));
+    expect(response.status).toBe(200);
+    expect(fixture.process).toHaveBeenCalledOnce();
+    expect(finishLookup).toBeTypeOf('function');
+    finishLookup?.({ data: [], error: null });
+    finishWrite?.({ data: [], error: null });
+    await Promise.all(fixture.deferred);
+  });
+
   it('persists ordered worker phases only for authoritative relevant sessions without duplicating gameplay', async()=>{
     const row={node_id:NODE,encounter_id:ENCOUNTER,next_due_at:'2026-08-31T00:00:00Z'};
     const fixture=setup([row],[{session_id:'20000000-0000-4000-8000-000000000001',node_id:NODE,encounter_id:ENCOUNTER}]);
