@@ -246,6 +246,13 @@
       "when": 1794564871767,
       "tag": "0034_scope_shared_game_read_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794675312370,
+      "tag": "0035_combat2_due_nodes_claim_first",
+      "breakpoints": true
     }
   ]
 }
