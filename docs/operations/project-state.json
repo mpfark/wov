@@ -3133,7 +3133,7 @@
       "status": "deployed",
       "sha": "ec36640d85f2d375543a352b04482c411aa42855",
       "timestamp": "2026-11-14T17:00:00Z",
-      "evidence_type": "repository",
+      "evidence_type": "cloud_inspection",
       "reporting_actor": "Lovable; Mik approved steps 1-3",
       "directly_verified": true,
       "artifact": "migration drizzle/0035_combat2_due_nodes_claim_first.sql; combat2-dispatch-once source_sha256 56e1306aa97a757009b18d02ac298162074ee2e7c069064c3120966cd7ce4930; live fight heartbeats 66974-66982 round times 42-158 ms (median 62 ms), inline claim ~0.06 ms",
