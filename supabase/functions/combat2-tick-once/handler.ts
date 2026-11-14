@@ -6,6 +6,7 @@ import type {
   ProcessNodeTickDependencies,
 } from "../_shared/combat2/process-node-tick-once.ts";
 import { bearerToken, constantTimeSecretEqual, redact } from "../_shared/combat2-internal-edge-auth.ts";
+import { roundTiming } from "../_shared/combat2-rpc-client.ts";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const JSON_HEADERS = { "Content-Type": "application/json" };
@@ -110,10 +111,13 @@ export function createCombat2TickHandler(deps: Combat2TickHandlerDependencies) {
     }
 
     let result: NodeTickRunResult;
+    const started = performance.now();
+    const phases: Array<{ phase: string; elapsedMs: number }> = [];
     try {
       result = await deps.processNodeTickOnce(nodeId, {
         abilityRecords: deps.abilityRecords,
         statusRecords: deps.statusRecords,
+        diagnostic: event => phases.push({ phase: event.event, elapsedMs: event.elapsedMs }),
         transport: {
           async claimNode(id) {
             const { data, error } = await client.rpc("node_tick_claim", { _node_id: id });
@@ -131,7 +135,8 @@ export function createCombat2TickHandler(deps: Combat2TickHandlerDependencies) {
       return failure("execution_failure", "worker execution failed", 500);
     }
     const status = outcomeStatus(result);
-    deps.log?.("[combat2-tick-once] completed", { nodeId, kind: result.kind, status });
+    deps.log?.("[combat2-tick-once] completed", { nodeId, kind: result.kind, status,
+      ...roundTiming(performance.now() - started), phases });
     return json(redact(result, [serviceRoleKey, workerSecret]), status);
   };
 }

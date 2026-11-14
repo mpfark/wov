@@ -1,4 +1,10 @@
 # Roadmap — WoV Classic Modernization
+
+## Live combat latency — Mik 2026-11-14
+- [x] Remove non-gameplay database waits and reuse worker HTTP connections; preserve two-second cadence.
+- [x] Test and deploy both combat workers; measure live phase timings against the 150ms target (127 tests; ten rounds, 113–537ms, median203ms, no skipped rounds).
+- [ ] Every round under150ms: blocked by measured hosted claim/commit transport variation; direct database pool credentials are unavailable in Lovable Cloud. No gameplay shortcuts or extra timers introduced.
+- [ ] Remove disposable Latencyprobe: normal lifecycle deletion refused; left alive16/16HP at Hearthvale, no guard bypass.
 Plan: .lovable/plan/wov-classic-architectural-modernization-plan-2026-11-09.md
 
 - [x] Phase 0a: repository-based inventory draft (docs/architecture/modernization-phase0-inventory.md)

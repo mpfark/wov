@@ -329,9 +329,9 @@ B–H are not implemented or authorized by 001A. Later task preparation may be d
 ## Later — refinement
 
 ### ENG-HB-002 — Heartbeat performance and scaling
-- **Engine area / status / priority:** scheduling; `deferred`; 15.
-- **Problem or decision:** future load must not turn one heartbeat into an all-world scan.
-- **Intended outcome:** measured bounded due-work scaling while retaining one authority.
+- **Engine area / status / priority:** scheduling; `in progress`; 15.
+- **Problem or decision:** future load must not turn one heartbeat into an all-world scan; Mik requested rounds below150ms while retaining the two-second cadence (2026-11-14).
+- **Intended outcome:** measured bounded due-work scaling and reduced database transport latency while retaining one authority.
 - **Dependencies:** ENG-HB-001 and production metrics.
 - **Evidence/current state:** dispatcher is bounded to due nodes.
 - **Acceptance criteria:** load targets, backpressure policy, fairness and catch-up bounds proven without competing timers.

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-10T23:49:42Z",
+  "updated_at": "2026-11-14T12:20:07.272423Z",
   "based_on_source_sha": "e1faa06b4fbf59d723636bde74af6abd503609a2",
   "status_vocabulary": [
     "authored",
@@ -596,6 +596,28 @@
   },
   "edge_function_deployments": [
     {
+      "identity": "combat2-tick-once-latency-2026-11-14",
+      "status": "deployed",
+      "sha": "e7ac229bd253be58526a3d6e5ab0c8c6a71919e9",
+      "timestamp": "2026-11-14T12:20:07.272423Z",
+      "evidence_type": "cloud_inspection",
+      "reporting_actor": "Lovable; Mik live combat optimization request",
+      "directly_verified": true,
+      "artifact": "docs/operations/combat2-latency-2026-11-14.md",
+      "evidence": "Tool confirmed deployment; submitted source SHA256 19c4b91beb6f7f2b4ccea18be1b893f7c155cb4d5a38d0c15899374895bceb0a. Reusable HTTP pool/client; diagnostic reads/writes removed from gameplay response path. No SQL/privilege/cadence change. Live updated dispatch timing observed; independent bundle retrieval not performed."
+    },
+    {
+      "identity": "combat2-dispatch-once-latency-2026-11-14",
+      "status": "deployed",
+      "sha": "e7ac229bd253be58526a3d6e5ab0c8c6a71919e9",
+      "timestamp": "2026-11-14T12:20:07.272423Z",
+      "evidence_type": "cloud_inspection",
+      "reporting_actor": "Lovable; Mik live combat optimization request",
+      "directly_verified": true,
+      "artifact": "docs/operations/combat2-latency-2026-11-14.md",
+      "evidence": "Tool confirmed deployment; submitted source SHA256 509ae49053844ee802b99fc95c1ef19620e42458eae81eb332431b6b7b3bc9f1. Reusable HTTP pool/client; diagnostic reads/writes removed from gameplay response path. No SQL/privilege/cadence change. Live updated dispatch timing observed; independent bundle retrieval not performed."
+    },
+    {
       "identity": "ENG-MODERNIZE-002 remaining worker combat rules consolidated",
       "status": "deployed",
       "sha": "ae11c2fae5534067547de7c597f8d548b0e263ea",
@@ -842,6 +864,17 @@
     "evidence": "Owner confirms successful live testing in published game: existing administrator accesses Admin UI and grants salvage to own character. Recording date2026-10-22, exact Publish/gameplay times/live bundle/request ID/quantity and balance deltas not supplied. Gem grants/replay/conflict/refusal not fully live-tested; no complete acceptance. Prior033 publication/gem and015 crafting evidence retained in docs/operations/gem-runtime-and-gameplay-blockers.md and docs/operations/idea-015-runtime-equipment-regression.md. Earlier minted-requester-session403 and nonmutating-check gaps remain separately scoped, not proof current owner account fails."
   },
   "combat2_operational_work": [
+    {
+      "identity": "ENG-HB-002-latency-2026-11-14",
+      "status": "authored",
+      "sha": "e7ac229bd253be58526a3d6e5ab0c8c6a71919e9",
+      "timestamp": "2026-11-14T12:20:07.272423Z",
+      "evidence_type": "repository",
+      "reporting_actor": "Lovable; Mik live combat optimization request",
+      "directly_verified": true,
+      "artifact": "docs/operations/combat2-latency-2026-11-14.md",
+      "evidence": "127 focused tests passed, including golden master and Edge parity. Live ten-round fight completed;113\u2013537ms claim-to-result, median203ms,1/10 under150ms. All consecutive two-second opportunities processed. Pool healthy; equipped-inventory query0.085ms, no SQL/index change justified.150ms target not achieved."
+    },
     {
       "identity": "ENG-MODERNIZE-005 \u2014 combat screens retired and ordinary-world fight",
       "status": "ready_for_manual_publish",
@@ -3098,6 +3131,17 @@
   ],
   "known_blockers": [
     {
+      "identity": "combat2-round-150ms-2026-11-14",
+      "status": "blocked",
+      "sha": "e7ac229bd253be58526a3d6e5ab0c8c6a71919e9",
+      "timestamp": "2026-11-14T12:20:07.272423Z",
+      "evidence_type": "cloud_inspection",
+      "reporting_actor": "Lovable; Mik live combat optimization request",
+      "directly_verified": true,
+      "artifact": "docs/operations/combat2-latency-2026-11-14.md",
+      "evidence": "Every round below150ms unachieved: measured hosted claim/commit HTTP variation. Managed pool not saturated; direct database credentials/pool settings unavailable. No guarantee from this bounded sample. Disposable test-character deletion also refused by normal lifecycle path."
+    },
+    {
       "identity": "idea-015-post-install-extra-execute-grant",
       "status": "installed",
       "sha": "8441598f1773402e1a560a13dd3cf52dd8195b54",
@@ -3358,6 +3402,17 @@
     "evidence": "Owner reviews and merges dedicated branch, then Mik manually Publishes. Verify enemy versus ally/self target selection, refusal detail and cache HP loading/current combat display. No SQL/Edge installation or hosted preflight needed. If a separate live Judgment refusal or authoritative HP timing issue persists, capture existing Diagnostics/one RPC result and seek separately scoped investigation. No automatic merge, publication, backend change or paused-command activation."
   },
   "volatile_runtime_observations": [
+    {
+      "identity": "combat2-latency-live-2026-11-14",
+      "status": "unknown",
+      "sha": "e7ac229bd253be58526a3d6e5ab0c8c6a71919e9",
+      "timestamp": "2026-11-14T12:20:07.272423Z",
+      "evidence_type": "cloud_inspection",
+      "reporting_actor": "Lovable; Mik live combat optimization request",
+      "directly_verified": true,
+      "artifact": "docs/operations/combat2-latency-2026-11-14.md",
+      "evidence": "12:17:08\u201312:17:26UTC, heartbeats65692\u201365701. Disposable Latencyprobe died in natural Pasture Wolf fight; UI respawn and database read confirm16/16HP at Hearthvale. UI deletion failed and character remains; no lifecycle bypass. World awakened by normal activity, existing idle shutdown retained, no global controls changed. Sample did not reproduce1\u20133s stalls; not a controlled before/after or load test."
+    },
     {
       "identity": "ooc-stance-cp-presentation-fix-operator-report-2026-10-02",
       "status": "unknown",
