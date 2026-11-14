@@ -260,4 +260,26 @@ describe('combat2-dispatch-once Edge handler', () => {
     expect(source).not.toContain('resolveNodeTick');
     expect(source.match(/combat2_due_nodes/g)).toHaveLength(2);
   });
+
+  it('reuses the claim returned with discovery instead of a second claim trip', async () => {
+    const row = { node_id: NODE, encounter_id: ENCOUNTER, next_due_at: '2026-08-31T00:00:00Z' };
+    const fixture = setup([row]);
+    const inline = { ok: true, kind: 'not_due', next_due_at: null };
+    fixture.rpc.mockImplementation(async (name: string) => name === 'combat2_due_nodes_claim_first'
+      ? { data: { ok: true, kind: 'candidates', candidates: [row], first_claim: { node_id: NODE, claim: inline } }, error: null }
+      : { data: [], error: null });
+    const claims: unknown[] = [];
+    fixture.process.mockImplementation(async (id, deps) => { claims.push(await deps.transport.claimNode(id)); claims.push(await deps.transport.claimNode(id)); return { ok: true, kind: 'not_due', nextDueAt: null }; });
+    expect((await fixture.handler(request())).status).toBe(200);
+    expect(claims[0]).toBe(inline);
+    expect(fixture.rpc.mock.calls.filter(([n]) => n === 'node_tick_claim')).toHaveLength(1);
+  });
+
+  it('falls back to a separate claim when discovery returned none', async () => {
+    const row = { node_id: NODE, encounter_id: ENCOUNTER, next_due_at: '2026-08-31T00:00:00Z' };
+    const fixture = setup([row]);
+    fixture.process.mockImplementation(async (id, deps) => { await deps.transport.claimNode(id); return { ok: true, kind: 'not_due', nextDueAt: null }; });
+    expect((await fixture.handler(request())).status).toBe(200);
+    expect(fixture.rpc).toHaveBeenCalledWith('node_tick_claim', { _node_id: NODE });
+  });
 });
