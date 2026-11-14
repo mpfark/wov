@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-14T17:00:00Z",
+  "updated_at": "2026-11-14T17:07:00Z",
   "based_on_source_sha": "e1faa06b4fbf59d723636bde74af6abd503609a2",
   "status_vocabulary": [
     "authored",
@@ -3138,6 +3138,17 @@
       "directly_verified": true,
       "artifact": "migration drizzle/0035_combat2_due_nodes_claim_first.sql; combat2-dispatch-once source_sha256 56e1306aa97a757009b18d02ac298162074ee2e7c069064c3120966cd7ce4930; live fight heartbeats 66974-66982 round times 42-158 ms (median 62 ms), inline claim ~0.06 ms",
       "evidence": "Function present with service_role-only execute (read role denied); 79 focused tests passed; dispatch logs 2026-11-14 16:58 show claim_acquired in ~0.06 ms from inline claim and 9 consecutive rounds 42-158 ms."
+    },
+    {
+      "identity": "ENG-PERF — concurrent node dispatch (up to 4 nodes per heartbeat)",
+      "status": "deployed",
+      "sha": "ec36640d85f2d375543a352b04482c411aa42855",
+      "timestamp": "2026-11-14T17:07:00Z",
+      "evidence_type": "cloud_inspection",
+      "reporting_actor": "Lovable; Mik approved",
+      "directly_verified": true,
+      "artifact": "src/server/combat2/dispatch-node-ticks-once.ts (DISPATCH_CONCURRENCY=4), spec section scheduler/dispatcher updated; combat2-dispatch-once source_sha256 7a4ffc7d3a54f2f52b422fc6ca8ed6750e88b39c287940876fbaea2f59a601cc",
+      "evidence": "91 focused tests passed (incl. slow-node-does-not-delay test and golden master); solo live fight heartbeats 67198-67203 committed 45-162 ms. Two-place concurrent live fight not yet observed."
     }
   ],
   "known_blockers": [
