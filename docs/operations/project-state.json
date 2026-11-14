@@ -3130,7 +3130,7 @@
     },
     {
       "identity": "ENG-PERF — merged due-fights discovery + first claim (installed, deployed, live-verified)",
-      "status": "verified",
+      "status": "deployed",
       "sha": "ec36640d85f2d375543a352b04482c411aa42855",
       "timestamp": "2026-11-14T17:00:00Z",
       "evidence_type": "repository",
